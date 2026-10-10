@@ -1,0 +1,151 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="heroGlow" cx="50%" cy="25%" r="60%">
+      <stop offset="0%" stop-color="#5e6ad2" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#5e6ad2" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#0b0b0f" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="cardBorder" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#343442" />
+      <stop offset="100%" stop-color="#1f1f27" />
+    </linearGradient>
+    <linearGradient id="linearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5e6ad2" />
+      <stop offset="100%" stop-color="#8f99fb" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="630" fill="#0b0b0f" />
+  
+  <!-- Subtle Grid Pattern -->
+  <g opacity="0.12">
+    <path d="M0 60H1200M0 120H1200M0 180H1200M0 240H1200M0 300H1200M0 360H1200M0 420H1200M0 480H1200M0 540H1200M0 600H1200" stroke="#ffffff" stroke-width="1" />
+    <path d="M60 0V630M120 0V630M180 0V630M240 0V630M300 0V630M360 0V630M420 0V630M480 0V630M540 0V630M600 0V630M660 0V630M720 0V630M780 0V630M840 0V630M900 0V630M960 0V630M1020 0V630M1080 0V630M1140 0V630" stroke="#ffffff" stroke-width="1" />
+  </g>
+
+  <!-- Central Radial Glow -->
+  <ellipse cx="600" cy="200" rx="480" ry="260" fill="url(#heroGlow)" />
+
+  <!-- Top Brand Pill -->
+  <g transform="translate(460, 45)">
+    <rect width="280" height="38" rx="19" fill="#121216" stroke="#2a2a36" stroke-width="1" />
+    <circle cx="26" cy="19" r="8" fill="url(#linearGradient)" />
+    <path d="M23 16L29 19L23 22Z" fill="#ffffff" />
+    <text x="44" y="24" fill="#f7f8f8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="0.5">ETSY HUNTER AI · 2026 ENGINE</text>
+  </g>
+
+  <!-- Title & Headline -->
+  <text x="600" y="132" text-anchor="middle" fill="#f7f8f8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif" font-size="40" font-weight="700" letter-spacing="-1">The Etsy product research &amp; rank tracker built for sellers</text>
+  <text x="600" y="170" text-anchor="middle" fill="#8a8f98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif" font-size="16" font-weight="400">Discover winning niches, reverse-engineer 13 bestselling tags, and track competitor daily sales velocity</text>
+
+  <!-- Workspace Preview Mock Container -->
+  <g transform="translate(100, 210)">
+    <!-- Container Window -->
+    <rect width="1000" height="380" rx="14" fill="#0f1015" stroke="url(#cardBorder)" stroke-width="1.5" />
+    
+    <!-- Top Window Title Bar -->
+    <path d="M0 14C0 6.268 6.268 0 14 0H986C993.732 0 1000 6.268 1000 14V42H0V14Z" fill="#15161c" />
+    <line x1="0" y1="42" x2="1000" y2="42" stroke="#242430" stroke-width="1" />
+    
+    <!-- Window Traffic Lights -->
+    <circle cx="24" cy="21" r="5" fill="#e5484d" opacity="0.8" />
+    <circle cx="40" cy="21" r="5" fill="#f2994a" opacity="0.8" />
+    <circle cx="56" cy="21" r="5" fill="#10b981" opacity="0.8" />
+    
+    <!-- Window Breadcrumbs in Title Bar -->
+    <text x="80" y="25" fill="#8a8f98" font-family="monospace" font-size="11">Shops &gt; AuraCraft Studio &gt; Product Research Board</text>
+    
+    <!-- Live Etsy Sync Badge -->
+    <rect x="850" y="11" width="130" height="20" rx="10" fill="#5e6ad2" fill-opacity="0.2" stroke="#5e6ad2" stroke-width="1" />
+    <text x="915" y="24" text-anchor="middle" fill="#707bfb" font-family="monospace" font-size="10" font-weight="600">LIVE ETSY RADAR</text>
+
+    <!-- Column 1: Trending Ideas -->
+    <g transform="translate(20, 56)">
+      <rect width="225" height="305" rx="10" fill="#121217" stroke="#22222b" stroke-width="1" />
+      <circle cx="20" cy="20" r="4" fill="#5e6ad2" />
+      <text x="32" y="24" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">Trending Ideas</text>
+      <text x="205" y="24" text-anchor="end" fill="#575a65" font-family="monospace" font-size="11">4</text>
+      
+      <!-- Card 1 -->
+      <g transform="translate(10, 40)">
+        <rect width="205" height="120" rx="8" fill="#16161d" stroke="#2a2a36" stroke-width="1" />
+        <text x="12" y="20" fill="#707bfb" font-family="monospace" font-size="10" font-weight="600">ETSY-241</text>
+        <rect x="135" y="10" width="60" height="15" rx="3" fill="#f2994a" fill-opacity="0.15" />
+        <text x="165" y="21" text-anchor="middle" fill="#f2994a" font-family="monospace" font-size="8" font-weight="700">20+ IN CARTS</text>
+        <text x="12" y="42" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="10" font-weight="500">Custom Birth Flower Acrylic Plaque</text>
+        <text x="12" y="58" fill="#8a8f98" font-family="-apple-system, sans-serif" font-size="9">AuraCraftStudio · 4.95★</text>
+        <line x1="12" y1="74" x2="193" y2="74" stroke="#262634" stroke-width="1" />
+        <text x="12" y="92" fill="#10b981" font-family="monospace" font-size="11" font-weight="700">$14,695/mo</text>
+        <text x="193" y="92" text-anchor="end" fill="#707bfb" font-family="monospace" font-size="11" font-weight="700">74% Margin</text>
+        <text x="12" y="110" fill="#8a8f98" font-family="monospace" font-size="8">13 Tags · Low Comp</text>
+      </g>
+    </g>
+
+    <!-- Column 2: High Potential -->
+    <g transform="translate(265, 56)">
+      <rect width="225" height="305" rx="10" fill="#121217" stroke="#22222b" stroke-width="1" />
+      <circle cx="20" cy="20" r="4" fill="#707bfb" />
+      <text x="32" y="24" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">High Potential</text>
+      <text x="205" y="24" text-anchor="end" fill="#575a65" font-family="monospace" font-size="11">5</text>
+      
+      <!-- Card 2 -->
+      <g transform="translate(10, 40)">
+        <rect width="205" height="120" rx="8" fill="#16161d" stroke="#2a2a36" stroke-width="1" />
+        <text x="12" y="20" fill="#707bfb" font-family="monospace" font-size="10" font-weight="600">ETSY-184</text>
+        <rect x="135" y="10" width="60" height="15" rx="3" fill="#f2994a" fill-opacity="0.15" />
+        <text x="165" y="21" text-anchor="middle" fill="#f2994a" font-family="monospace" font-size="8" font-weight="700">20+ IN CARTS</text>
+        <text x="12" y="42" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="10" font-weight="500">Minimalist Wedding Budget Planner</text>
+        <text x="12" y="58" fill="#8a8f98" font-family="-apple-system, sans-serif" font-size="9">PaperlessPlanner · 4.98★</text>
+        <line x1="12" y1="74" x2="193" y2="74" stroke="#262634" stroke-width="1" />
+        <text x="12" y="92" fill="#10b981" font-family="monospace" font-size="11" font-weight="700">$8,500/mo</text>
+        <text x="193" y="92" text-anchor="end" fill="#707bfb" font-family="monospace" font-size="11" font-weight="700">98% Margin</text>
+        <text x="12" y="110" fill="#8a8f98" font-family="monospace" font-size="8">Digital Download · Low Comp</text>
+      </g>
+    </g>
+
+    <!-- Column 3: Optimized -->
+    <g transform="translate(510, 56)">
+      <rect width="225" height="305" rx="10" fill="#121217" stroke="#22222b" stroke-width="1" />
+      <circle cx="20" cy="20" r="4" fill="#10b981" />
+      <text x="32" y="24" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">Optimized</text>
+      <text x="205" y="24" text-anchor="end" fill="#575a65" font-family="monospace" font-size="11">3</text>
+      
+      <!-- Card 3 -->
+      <g transform="translate(10, 40)">
+        <rect width="205" height="120" rx="8" fill="#16161d" stroke="#2a2a36" stroke-width="1" />
+        <text x="12" y="20" fill="#707bfb" font-family="monospace" font-size="10" font-weight="600">ETSY-239</text>
+        <rect x="135" y="10" width="60" height="15" rx="3" fill="#f2994a" fill-opacity="0.15" />
+        <text x="165" y="21" text-anchor="middle" fill="#f2994a" font-family="monospace" font-size="8" font-weight="700">18 IN CARTS</text>
+        <text x="12" y="42" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="10" font-weight="500">Retro Nurse Embroidered Crewneck</text>
+        <text x="12" y="58" fill="#8a8f98" font-family="-apple-system, sans-serif" font-size="9">ThreadVibeCo · 4.92★</text>
+        <line x1="12" y1="74" x2="193" y2="74" stroke="#262634" stroke-width="1" />
+        <text x="12" y="92" fill="#10b981" font-family="monospace" font-size="11" font-weight="700">$11,760/mo</text>
+        <text x="193" y="92" text-anchor="end" fill="#707bfb" font-family="monospace" font-size="11" font-weight="700">62% Margin</text>
+        <text x="12" y="110" fill="#8a8f98" font-family="monospace" font-size="8">13 Tags Optimized · Ready to List</text>
+      </g>
+    </g>
+
+    <!-- Column 4: Tracked / Watchlist -->
+    <g transform="translate(755, 56)">
+      <rect width="225" height="305" rx="10" fill="#121217" stroke="#22222b" stroke-width="1" />
+      <circle cx="20" cy="20" r="4" fill="#f2994a" />
+      <text x="32" y="24" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">Tracked / Watchlist</text>
+      <text x="205" y="24" text-anchor="end" fill="#575a65" font-family="monospace" font-size="11">6</text>
+      
+      <!-- Card 4 -->
+      <g transform="translate(10, 40)">
+        <rect width="205" height="120" rx="8" fill="#16161d" stroke="#2a2a36" stroke-width="1" />
+        <text x="12" y="20" fill="#707bfb" font-family="monospace" font-size="10" font-weight="600">ETSY-228</text>
+        <rect x="135" y="10" width="60" height="15" rx="3" fill="#f2994a" fill-opacity="0.15" />
+        <text x="165" y="21" text-anchor="middle" fill="#f2994a" font-family="monospace" font-size="8" font-weight="700">20+ IN CARTS</text>
+        <text x="12" y="42" fill="#f7f8f8" font-family="-apple-system, sans-serif" font-size="10" font-weight="500">Ghost Campfire Flickering Night Light</text>
+        <text x="12" y="58" fill="#8a8f98" font-family="-apple-system, sans-serif" font-size="9">SpookyCeramics · 4.88★</text>
+        <line x1="12" y1="74" x2="193" y2="74" stroke="#262634" stroke-width="1" />
+        <text x="12" y="92" fill="#10b981" font-family="monospace" font-size="11" font-weight="700">$13,965/mo</text>
+        <text x="193" y="92" text-anchor="end" fill="#707bfb" font-family="monospace" font-size="11" font-weight="700">71% Margin</text>
+        <text x="12" y="110" fill="#8a8f98" font-family="monospace" font-size="8">Daily Sales Radar Active</text>
+      </g>
+    </g>
+  </g>
+</svg>
