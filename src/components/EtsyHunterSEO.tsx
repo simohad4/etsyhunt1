@@ -15,28 +15,28 @@ export const EtsyHunterSEO: React.FC<EtsyHunterSEOProps> = ({
   selectedProduct
 }) => {
   useEffect(() => {
-    let title = 'Etsy Hunter AI';
+    let title = 'Etsy Hunter — Product Research & Market Intelligence';
     let description =
-      'AI-powered market research, demand validation, and winning product generator for Etsy, POD, and dropshipping sellers.';
+      'Etsy product research and market intelligence tool. Evaluate niches, inspect candidate tags, analyze observed marketplace signals, and model demand metrics.';
 
     if (viewMode === 'landing') {
-      title = 'Etsy Hunter AI';
+      title = 'Etsy Hunter — Product Research & Market Intelligence for Sellers';
       description =
-        'AI-powered market research, demand validation, and winning product generator for Etsy, POD, and dropshipping sellers.';
+        'Etsy product research and market intelligence tool. Evaluate niches, inspect candidate tags, analyze observed marketplace signals, and model demand metrics.';
     } else if (viewMode === 'workspace') {
-      const shopTitle = workspaceName || 'Etsy Hunter Shop';
+      const wsTitle = workspaceName || 'Personal Workspace';
       if (selectedProduct) {
-        title = `${selectedProduct.identifier}: ${selectedProduct.title} | ${shopTitle} — Etsy Hunter AI`;
-        description = `Live sales velocity: $${selectedProduct.estimatedMonthlyRevenue.toLocaleString()}/mo, ${selectedProduct.inCartCount} buyers currently have this listing in cart.`;
+        title = `${selectedProduct.identifier}: ${selectedProduct.title} | ${wsTitle} — Etsy Hunter`;
+        description = `Observed price: $${selectedProduct.observedPrice.toFixed(2)}, estimated monthly revenue: $${selectedProduct.estimatedMonthlyRevenue.toLocaleString()}/mo.`;
       } else if (activeTab === 'board') {
-        title = `Niche Research Board | ${shopTitle} — Etsy Hunter AI`;
-        description = `Track high-potential Etsy product ideas, 13 tags, and buyer cart volume inside ${shopTitle}.`;
+        title = `Product Research Board | ${wsTitle} — Etsy Hunter`;
+        description = `Evaluate candidate Etsy listings and research stages inside ${wsTitle}.`;
       } else if (activeTab === 'watchlist') {
-        title = `Competitor Shop Watchlist | ${shopTitle} — Etsy Hunter AI`;
-        description = `Real-time competitor shop tracking and winning listing radar inside ${shopTitle}.`;
+        title = `Saved Listings Library | ${wsTitle} — Etsy Hunter`;
+        description = `Manage your curated library of candidate listings inside ${wsTitle}.`;
       } else if (activeTab === 'settings') {
-        title = `Shop Settings & Quota | ${shopTitle} — Etsy Hunter AI`;
-        description = `Manage multi-tenant Etsy shop configurations, API scan quotas, and seats in ${shopTitle}.`;
+        title = `Plan & Research Credits | ${wsTitle} — Etsy Hunter`;
+        description = `Manage research credits, saved listing quotas, and plan tiers in ${wsTitle}.`;
       }
     }
 

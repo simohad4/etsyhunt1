@@ -7,7 +7,6 @@ import { fetchApifyListings, analyzeEtsyMarket } from './src/services/analyzer';
 dotenv.config();
 
 function resolvePort(): number {
-  // Check CLI arguments (--port 3000 or --port=3000)
   const portIndex = process.argv.indexOf('--port');
   if (portIndex !== -1 && process.argv[portIndex + 1]) {
     const val = parseInt(process.argv[portIndex + 1], 10);
@@ -19,7 +18,6 @@ function resolvePort(): number {
     if (!isNaN(val)) return val;
   }
 
-  // Check DEFAULT_APP_PORT or APP_PORT
   if (process.env.DEFAULT_APP_PORT) {
     const val = parseInt(process.env.DEFAULT_APP_PORT, 10);
     if (!isNaN(val)) return val;
@@ -29,7 +27,6 @@ function resolvePort(): number {
     if (!isNaN(val)) return val;
   }
 
-  // Use process.env.PORT only if it is not the external Nginx ingress port (8080)
   if (process.env.PORT && process.env.PORT !== '8080' && process.env.PORT !== process.env.NGINX_PORT) {
     const val = parseInt(process.env.PORT, 10);
     if (!isNaN(val)) return val;
@@ -62,26 +59,36 @@ async function startServer() {
   app.get('/api/health', (_req, res) => {
     res.json({
       status: 'online',
-      name: 'Etsy Hunter AI Enterprise API',
-      engineReady: true,
+      name: 'Etsy Hunter API',
+      version: '1.0.0-m1',
       timestamp: new Date().toISOString()
     });
   });
 
-  // Main analyze endpoint
+  // Main analyze endpoint with safety guardrails
   app.post('/api/analyze-etsy', async (req, res) => {
     try {
-      const { keyword, apifyToken } = req.body || {};
+      const { keyword, pages = 1 } = req.body || {};
 
+      // Input validation
       if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
         return res.status(400).json({ error: 'Keyword is required and cannot be empty.' });
       }
 
-      const cleanKeyword = keyword.trim();
-      const headerToken = req.headers['x-apify-token'] as string | undefined;
-      const effectiveToken = apifyToken || headerToken || process.env.APIFY_TOKEN;
+      if (keyword.trim().length > 100) {
+        return res.status(400).json({ error: 'Keyword must not exceed 100 characters.' });
+      }
 
-      // 1. Fetch live listings or fallback data
+      const cleanKeyword = keyword.trim();
+      const pageCount = Math.max(1, Math.min(3, typeof pages === 'number' ? pages : 1));
+
+      // M1 Security Guardrail:
+      // Live paid scraping is disabled for unauthenticated / unauthorized requests until M2/M3
+      // Check for user-supplied Apify token or explicit server environment override
+      const allowLiveScraping = process.env.ENABLE_LIVE_SCRAPING === 'true';
+      const effectiveToken = allowLiveScraping ? process.env.APIFY_TOKEN : undefined;
+
+      // 1. Fetch listings (with fallback engine active for demo/safety)
       const { listings, isLive, error: scrapeNotice } = await fetchApifyListings(
         cleanKeyword,
         effectiveToken
@@ -91,17 +98,21 @@ async function startServer() {
         return res.status(404).json({ error: 'No listings found for this keyword.' });
       }
 
-      // 2. Run Gemini Market Intelligence
+      // Limit results according to requested pages (approx. 36 per page max)
+      const maxResults = pageCount * 36;
+      const boundedListings = listings.slice(0, maxResults);
+
+      // 2. Run Market Analysis
       const analysis = await analyzeEtsyMarket(
         cleanKeyword,
-        listings,
+        boundedListings,
         isLive,
         scrapeNotice
       );
 
       return res.json(analysis);
     } catch (err: any) {
-      console.error('[Etsy Hunter AI Server Error]:', err);
+      console.error('[Etsy Hunter Server Error]:', err);
       const isConfigError = err.message?.includes('GEMINI_API_KEY');
       return res.status(isConfigError ? 500 : 502).json({
         error: err.message || 'Failed to complete market analysis.'
@@ -125,11 +136,11 @@ async function startServer() {
   }
 
   const server = app.listen(port, host, () => {
-    console.log(`[Etsy Hunter AI] Full-Stack server live on http://${host}:${port}`);
+    console.log(`[Etsy Hunter] Full-Stack server live on http://${host}:${port}`);
   });
 
   const shutdown = () => {
-    console.log('[Etsy Hunter AI] Shutting down server...');
+    console.log('[Etsy Hunter] Shutting down server...');
     server.close(() => {
       process.exit(0);
     });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Columns, ExternalLink, Sparkles, Tag, ArrowRight } from 'lucide-react';
+import { Search, Plus, Columns, ExternalLink, Tag, ArrowRight } from 'lucide-react';
 import { EtsyProductItem } from '../types/etsyHunter';
 
 interface EtsyHunterCommandMenuProps {
@@ -60,7 +60,7 @@ export const EtsyHunterCommandMenu: React.FC<EtsyHunterCommandMenuProps> = ({
           {/* Quick Actions */}
           <div>
             <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#575a65]">
-              Quick Actions
+              Quick Navigation
             </div>
             <div className="mt-1 space-y-0.5">
               <button
@@ -68,16 +68,16 @@ export const EtsyHunterCommandMenu: React.FC<EtsyHunterCommandMenuProps> = ({
                   onClose();
                   onOpenTagAnalyzer();
                 }}
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-5 h-5 rounded bg-[#5e6ad2]/20 flex items-center justify-center text-[#707bfb]">
-                    <Tag className="w-3 h-3" />
+                    <Search className="w-3 h-3" />
                   </div>
-                  <span>Launch 13-Tag Reverse Extractor</span>
+                  <span>Start Product Research Query</span>
                 </div>
                 <span className="eh-kbd text-[9px] group-hover:border-[#383848]">
-                  C
+                  ⌘K
                 </span>
               </button>
 
@@ -86,13 +86,13 @@ export const EtsyHunterCommandMenu: React.FC<EtsyHunterCommandMenuProps> = ({
                   onClose();
                   onNavigateWorkspace();
                 }}
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-5 h-5 rounded bg-[#18181f] flex items-center justify-center text-[#8a8f98]">
                     <Columns className="w-3 h-3" />
                   </div>
-                  <span>Open Niche Research Dashboard</span>
+                  <span>Go to Personal Research Board</span>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-[#575a65] group-hover:text-white" />
               </button>
@@ -102,62 +102,58 @@ export const EtsyHunterCommandMenu: React.FC<EtsyHunterCommandMenuProps> = ({
                   onClose();
                   onNavigateHome();
                 }}
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-5 h-5 rounded bg-[#18181f] flex items-center justify-center text-[#8a8f98]">
-                    <Sparkles className="w-3 h-3" />
+                    <ArrowRight className="w-3 h-3" />
                   </div>
-                  <span>Return to Landing Overview</span>
+                  <span>Return to Public Landing Page</span>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Tracked Listings */}
-          <div>
-            <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#575a65] flex items-center justify-between">
-              <span>Etsy Listings &amp; Niches ({filteredProducts.length})</span>
+          {/* Listings List */}
+          {filteredProducts.length > 0 && (
+            <div>
+              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#575a65] flex items-center justify-between">
+                <span>Evaluated Listings ({filteredProducts.length})</span>
+              </div>
+              <div className="mt-1 space-y-0.5">
+                {filteredProducts.slice(0, 7).map((prod) => (
+                  <button
+                    key={prod.id}
+                    onClick={() => {
+                      onClose();
+                      onSelectProduct(prod);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="font-mono text-[11px] text-[#707bfb] shrink-0">
+                        {prod.identifier}
+                      </span>
+                      <span className="truncate text-xs text-[#8a8f98] group-hover:text-[#f7f8f8]">
+                        {prod.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-[11px] font-mono text-[#30a46c]">
+                        ${prod.estimatedMonthlyRevenue.toLocaleString()}/mo
+                      </span>
+                      <span className="text-[9px] uppercase px-1 rounded bg-[#18181f] border border-[#282835] text-[#575a65]">
+                        {prod.competition}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="mt-1 space-y-0.5">
-              {filteredProducts.slice(0, 7).map((prod) => (
-                <button
-                  key={prod.id}
-                  onClick={() => {
-                    onClose();
-                    onSelectProduct(prod);
-                  }}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-[#18181f] text-left text-[#f7f8f8] group transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="font-mono text-[11px] text-[#707bfb] shrink-0">
-                      {prod.identifier}
-                    </span>
-                    <span className="truncate text-xs text-[#8a8f98] group-hover:text-[#f7f8f8]">
-                      {prod.title}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className="text-[11px] font-mono text-[#30a46c]">
-                      ${prod.estimatedMonthlyRevenue.toLocaleString()}/mo
-                    </span>
-                    <span className="text-[9px] uppercase px-1 rounded bg-[#18181f] border border-[#282835] text-[#575a65]">
-                      {prod.competition}
-                    </span>
-                  </div>
-                </button>
-              ))}
-
-              {filteredProducts.length === 0 && (
-                <div className="px-3 py-4 text-center text-xs text-[#575a65]">
-                  No matching Etsy products found for &ldquo;{query}&rdquo;
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Footer shortcuts */}
+        {/* Footer */}
         <div className="px-4 py-2 border-t border-[#22222b] bg-[#0e0e13] flex items-center justify-between text-[11px] text-[#575a65]">
           <div className="flex items-center gap-2 font-mono">
             <span>Navigation:</span>
@@ -165,7 +161,7 @@ export const EtsyHunterCommandMenu: React.FC<EtsyHunterCommandMenuProps> = ({
             <span className="eh-kbd text-[9px]">↓</span>
             <span className="eh-kbd text-[9px]">↵</span>
           </div>
-          <span className="font-mono text-[10px] text-[#707bfb]">Etsy Hunter Command Engine</span>
+          <span className="font-mono text-[10px] text-[#707bfb]">Etsy Hunter Command Menu</span>
         </div>
       </div>
     </div>

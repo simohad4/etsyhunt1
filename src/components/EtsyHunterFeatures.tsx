@@ -1,49 +1,49 @@
 import React from 'react';
-import { Tag, TrendingUp, Search, Zap, ShieldCheck, Database, Sliders, ArrowUpRight } from 'lucide-react';
+import { Tag, TrendingUp, Search, Zap, ShieldCheck, Database, Sliders, BarChart2 } from 'lucide-react';
 
 export const EtsyHunterFeatures: React.FC = () => {
   const features = [
     {
       icon: Tag,
-      badge: 'Algorithm Advantage',
-      title: '13 Bestseller Tag Extraction',
-      description: 'Instantly reverse engineer all 13 hidden algorithmic tags of top ranking Etsy listings. Copy in one click directly into your Etsy Shop Manager.',
-      shortcut: 'Tag Extractor'
+      badge: 'Listing Inspection',
+      title: 'Candidate Tag & Keyword Analysis',
+      description: 'Inspect listing tags and identify relevant search phrases used by ranking products in your niche category.',
+      shortcut: 'Tag Analysis'
     },
     {
       icon: TrendingUp,
-      badge: 'Live Radar',
-      title: 'Real-Time Sales & Cart Velocity',
-      description: 'Track how many shoppers currently have an item in cart and estimate 24h & monthly revenue velocity with 94.2% historical accuracy.',
-      shortcut: 'Velocity Radar'
+      badge: 'Marketplace Signals',
+      title: 'Observed Cart Signals & Demand Trends',
+      description: 'Observe active buyer in-cart badges and compare estimated monthly sales volume across competing listings.',
+      shortcut: 'Demand Signals'
     },
     {
       icon: Search,
-      badge: 'High Demand / Low Comp',
-      title: 'Keyword Gap & Saturation Finder',
-      description: 'Identify high-demand buyer search phrases with low shop saturation scores. Uncover untapped goldmine niches before competitors spot them.',
-      shortcut: 'Gap Finder'
+      badge: 'Opportunity Discovery',
+      title: 'Competition & Opportunity Scoring',
+      description: 'Review modeled saturation ratings and opportunity scores to identify low-competition niches with proven interest.',
+      shortcut: 'Opportunity'
     },
     {
       icon: Database,
-      badge: 'Live Sync',
-      title: 'Automated Competitor Shop Watchlist',
-      description: 'Pin top Etsy competitor shops to your workspace radar. Track new product launches, listing price changes, and bestseller badges automatically.',
-      shortcut: 'Shop Radar'
+      badge: 'Curated Tracking',
+      title: 'Personal Saved Listings Library',
+      description: 'Save high-interest listings to your personal workspace. Organize candidate concepts by research stage.',
+      shortcut: 'Saved Listings'
     },
     {
       icon: Sliders,
       badge: 'Unit Economics',
-      title: 'Margin & Production Simulator',
-      description: 'Model POD blanks, print provider shipping, Etsy transaction and listing fees. Know your exact net profit margin before creating a single draft.',
-      shortcut: 'Margin Calc'
+      title: 'Estimated Margin Simulator',
+      description: 'Simulate production blanks, shipping costs, and Etsy platform fees to model potential net margins before investing.',
+      shortcut: 'Margin Model'
     },
     {
       icon: Zap,
-      badge: 'Keyboard Speed',
-      title: 'Instant Keyboard-Driven Workflow',
-      description: 'Built for high-volume research. Jump across niches with Cmd+K, open tag inspection with C, and manage pipeline stages in seconds.',
-      shortcut: '⌘K + C'
+      badge: 'Workflow Speed',
+      title: 'Fast Keyboard-Driven Interface',
+      description: 'Designed for efficient research sessions. Jump between views with ⌘K, inspect listing tags, and export datasets to CSV.',
+      shortcut: '⌘K'
     }
   ];
 
@@ -53,13 +53,13 @@ export const EtsyHunterFeatures: React.FC = () => {
         {/* Section Header */}
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18181f] border border-[#282835] text-xs font-mono text-[#707bfb]">
-            <span>ENGINEERED FOR POWER SELLERS</span>
+            <span>BUILT FOR ETSY SELLERS</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#f7f8f8]">
-            Features built to uncover profitable niches fast
+            Core tools to research and evaluate product niches
           </h2>
           <p className="text-sm sm:text-base text-[#8a8f98] leading-relaxed">
-            Stop guessing with generic tools. Etsy Hunter AI gives you verified buyer signals, exact tag combinations, and instant margin calculations.
+            Etsy Hunter provides transparent market intelligence, separating directly observed platform signals from estimated projections.
           </p>
         </div>
 
@@ -85,14 +85,14 @@ export const EtsyHunterFeatures: React.FC = () => {
                     {feat.title}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-[#8a8f98] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#8a8f98] leading-relaxed mt-2">
                     {feat.description}
                   </p>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-[#22222b]/50 flex items-center justify-between text-xs text-[#575a65]">
-                  <span>Etsy Hunter high-speed index</span>
-                  <span className="font-mono text-[#707bfb]">0.2s latency</span>
+                  <span>{feat.shortcut}</span>
+                  <span className="font-mono text-[#707bfb]">Research Feature</span>
                 </div>
               </div>
             );

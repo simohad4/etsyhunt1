@@ -312,7 +312,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({
               <span className="text-[10px]">to select</span>
             </span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-600">Etsy Hunter AI CMD Menu</span>
+          <span className="text-[10px] font-mono text-zinc-600">Etsy Hunter CMD Menu</span>
         </div>
       </div>
     </div>

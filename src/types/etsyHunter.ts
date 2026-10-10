@@ -6,32 +6,53 @@ export interface EtsyProductItem {
   identifier: string; // e.g. ETSY-101
   title: string;
   shopName: string;
-  shopRating: number;
-  reviewsCount: number;
   imageUrl: string;
-  price: number;
-  estimatedMonthlyRevenue: number;
-  monthlySales: number;
-  monthlyViews: number;
-  inCartCount: number;
-  stage: ResearchStage;
-  competition: CompetitionLevel;
   category: string;
   tags: string[];
-  estimatedMarginPct: number;
+
+  // 1. Observed Marketplace Signals (Directly observed from platform where available)
+  observedPrice: number;
+  observedShopRating?: number;
+  observedReviewsCount?: number;
+  observedShopLifetimeSales?: number;
+  observedInCartCount?: number;
+  observedIsBestseller?: boolean;
+  observedIsSponsored?: boolean;
   etsyUrl?: string;
-  isBestseller?: boolean;
+
+  // 2. Estimated Metrics (Statistically estimated from observed signals)
+  estimatedMonthlyRevenue: number;
+  estimatedMonthlySales: number;
+  estimatedMonthlyViews: number;
+  estimatedMarginPct: number;
+
+  // 3. Modeled Indicators (Derived opportunity and competition scores)
+  opportunityScore: number;
+  competition: CompetitionLevel;
+  stage: ResearchStage;
+
   notes?: string;
   createdAt: string;
 }
 
 export interface EtsyKeywordResult {
   keyword: string;
-  searchVolume: number;
+  // Estimated metrics
+  estimatedSearchVolume: number;
+  estimatedAvgPrice: number;
+  // Modeled indicators
   competitionLevel: CompetitionLevel;
-  competitionCount: number;
-  clickThroughRate: number;
-  avgPrice: number;
-  recommendedTags: string[];
+  modeledCompetitionCount: number;
   opportunityScore: number;
+  // Candidate tags
+  suggestedTags: string[];
+}
+
+export interface ResearchSearchHistoryItem {
+  id: string;
+  keyword: string;
+  pagesRequested: number;
+  creditsConsumed: number;
+  timestamp: string;
+  listingsFound: number;
 }

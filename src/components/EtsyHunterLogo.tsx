@@ -12,7 +12,7 @@ export const EtsyHunterIcon: React.FC<{ className?: string }> = ({ className = '
     viewBox="0 0 100 100"
     fill="currentColor"
     className={className}
-    aria-label="Etsy Hunter AI Logo"
+    aria-label="Etsy Hunter Logo"
   >
     <path
       fillRule="evenodd"
@@ -38,14 +38,9 @@ export const EtsyHunterLogo: React.FC<EtsyHunterLogoProps> = ({
         <Sparkles className="w-3.5 h-3.5 text-white" />
       </div>
       {showText && (
-        <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-sm tracking-[-0.03em] text-[#f7f8f8]">
-            Etsy Hunter
-          </span>
-          <span className="text-[9px] font-mono font-bold uppercase px-1 py-0.2 rounded bg-[#5e6ad2]/20 text-[#707bfb] border border-[#5e6ad2]/40">
-            AI
-          </span>
-        </div>
+        <span className="font-semibold text-sm tracking-[-0.03em] text-[#f7f8f8]">
+          Etsy Hunter
+        </span>
       )}
     </div>
   );

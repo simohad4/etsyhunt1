@@ -1,181 +1,151 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, WorkspaceData, WatchlistItem, isLiveSupabaseConfigured } from '../services/supabase';
-import { EtsyProductItem } from '../types/etsyHunter';
+import {
+  supabase,
+  WorkspaceData,
+  SavedListingItem,
+  isLiveSupabaseConfigured,
+  fetchUserWorkspaceData,
+  updateUserPassword
+} from '../services/supabase';
+import { EtsyProductItem, ResearchSearchHistoryItem } from '../types/etsyHunter';
+import { PRICING_PLANS } from '../config/pricing';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isLiveSupabase: boolean;
-  workspaces: WorkspaceData[];
-  activeWorkspace: WorkspaceData | null;
-  watchlist: WatchlistItem[];
+  workspace: WorkspaceData | null;
+  savedListings: SavedListingItem[];
+  searchHistory: ResearchSearchHistoryItem[];
+  authError: string | null;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    fullName?: string
+  ) => Promise<{ data: any; error: Error | null; needsEmailVerification?: boolean }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  switchWorkspace: (workspaceId: string) => void;
-  createWorkspace: (name: string, plan?: 'free' | 'standard' | 'plus') => WorkspaceData;
-  updateWorkspacePlan: (plan: 'free' | 'standard' | 'plus' | 'enterprise') => void;
-  consumeCredit: (amount?: number) => boolean;
-  addToWatchlist: (product: EtsyProductItem, notes?: string) => void;
-  removeFromWatchlist: (productId: string) => void;
-  toggleWatchlist: (product: EtsyProductItem) => void;
-  isInWatchlist: (productId: string) => boolean;
+  updatePlan: (plan: 'starter' | 'pro' | 'agency') => void;
+  consumeCredits: (amount: number, metadata?: { keyword: string; pages: number; listingsFound: number }) => Promise<boolean>;
+  saveListing: (product: EtsyProductItem, notes?: string) => Promise<{ success: boolean; error?: string }>;
+  removeSavedListing: (productId: string) => Promise<void>;
+  isListingSaved: (productId: string) => boolean;
+  clearHistory: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const DEFAULT_WORKSPACES: WorkspaceData[] = [
-  {
-    id: 'ws-etsyhunter-core',
-    name: 'AuraCraft Studios (Main)',
-    slug: 'auracraft-studios',
-    plan: 'plus',
-    role: 'owner',
-    creditsRemaining: 420,
-    totalCredits: 500,
-    productsCount: 48,
-    membersCount: 4,
-    maxMembers: 20,
-    storageUsedMb: 1240,
-    storageLimitMb: 5000,
-    createdAt: '2026-01-15'
-  },
-  {
-    id: 'ws-personal',
-    name: 'POD Digital Lab',
-    slug: 'pod-digital-lab',
-    plan: 'free',
-    role: 'owner',
-    creditsRemaining: 45,
-    totalCredits: 100,
-    productsCount: 12,
-    membersCount: 1,
-    maxMembers: 3,
-    storageUsedMb: 120,
-    storageLimitMb: 500,
-    createdAt: '2026-03-01'
-  }
-];
-
-const INITIAL_WATCHLIST: WatchlistItem[] = [
-  {
-    id: 'watch-1',
-    workspaceId: 'ws-etsyhunter-core',
-    productId: 'etsy-prod-1',
-    identifier: 'ETSY-101',
-    title: 'Minimalist Affirmation Glass Cups with Bamboo Lid',
-    shopName: 'AuraCraftStudios',
-    price: 24.50,
-    estimatedMonthlyRevenue: 14200,
-    stage: 'trending',
-    competition: 'low',
-    imageUrl: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=300&auto=format&fit=crop&q=80',
-    addedAt: '2 hours ago',
-    notes: '22 buyers currently have this in cart. Daily sales velocity exceeding 18 units.',
-    alertOnUpdate: true
-  },
-  {
-    id: 'watch-2',
-    workspaceId: 'ws-etsyhunter-core',
-    productId: 'etsy-prod-3',
-    identifier: 'ETSY-103',
-    title: 'Custom Dog Ear Outline Embroidered Sweatshirt',
-    shopName: 'PawsAndThreadCo',
-    price: 46.00,
-    estimatedMonthlyRevenue: 34500,
-    stage: 'high_potential',
-    competition: 'medium',
-    imageUrl: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=300&auto=format&fit=crop&q=80',
-    addedAt: 'Yesterday',
-    notes: 'Bestseller in Pet Lover Gifts. Average gross profit margin ~72%.',
-    alertOnUpdate: true
-  }
-];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Workspaces state
-  const [workspaces, setWorkspaces] = useState<WorkspaceData[]>(() => {
+  // Single Personal Workspace (1 user = 1 personal workspace)
+  const [workspace, setWorkspace] = useState<WorkspaceData | null>(() => {
     try {
-      const saved = localStorage.getItem('etsyhunter_workspaces');
-      return saved ? JSON.parse(saved) : DEFAULT_WORKSPACES;
+      const saved = localStorage.getItem('etsyhunter_personal_workspace');
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return DEFAULT_WORKSPACES;
+      return null;
     }
   });
 
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
+  // Saved Listings state (zero for new users)
+  const [savedListings, setSavedListings] = useState<SavedListingItem[]>(() => {
     try {
-      const saved = localStorage.getItem('etsyhunter_active_workspace_id');
-      return saved || 'ws-etsyhunter-core';
+      const saved = localStorage.getItem('etsyhunter_saved_listings');
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return 'ws-etsyhunter-core';
+      return [];
     }
   });
 
-  // Watchlist state
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>(() => {
+  // Research History state (zero for new users)
+  const [searchHistory, setSearchHistory] = useState<ResearchSearchHistoryItem[]>(() => {
     try {
-      const saved = localStorage.getItem('etsyhunter_watchlist');
-      return saved ? JSON.parse(saved) : INITIAL_WATCHLIST;
+      const saved = localStorage.getItem('etsyhunter_search_history');
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_WATCHLIST;
+      return [];
     }
   });
 
-  // Sync to storage
+  // Sync to local storage
   useEffect(() => {
-    localStorage.setItem('etsyhunter_workspaces', JSON.stringify(workspaces));
-  }, [workspaces]);
+    if (workspace) {
+      localStorage.setItem('etsyhunter_personal_workspace', JSON.stringify(workspace));
+    } else {
+      localStorage.removeItem('etsyhunter_personal_workspace');
+    }
+  }, [workspace]);
 
   useEffect(() => {
-    localStorage.setItem('etsyhunter_active_workspace_id', activeWorkspaceId);
-  }, [activeWorkspaceId]);
+    localStorage.setItem('etsyhunter_saved_listings', JSON.stringify(savedListings));
+  }, [savedListings]);
 
   useEffect(() => {
-    localStorage.setItem('etsyhunter_watchlist', JSON.stringify(watchlist));
-  }, [watchlist]);
+    localStorage.setItem('etsyhunter_search_history', JSON.stringify(searchHistory));
+  }, [searchHistory]);
 
-  // Listen to Supabase Auth state
+  const loadUserData = async (currentUser: User) => {
+    try {
+      const { workspace: ws, savedListings: listings, searchHistory: history } = await fetchUserWorkspaceData(currentUser);
+      setWorkspace(ws);
+      setSavedListings(listings);
+      if (history && history.length > 0) {
+        setSearchHistory(history);
+      }
+    } catch (err: any) {
+      console.error('Failed to load user workspace data:', err);
+      setAuthError(err.message || 'Failed to initialize workspace data.');
+    }
+  };
+
+  // Handle Supabase Auth state changes
   useEffect(() => {
     let mounted = true;
 
-    // 1. Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setAuthError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserData(session.user).finally(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setWorkspace(null);
+        setSavedListings([]);
         setLoading(false);
       }
     });
 
-    // 2. Auth state subscription
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        // Auto-provision default Etsy Hunter workspace on first sign up if needed
-        if (session?.user) {
-          const userWorkspaces = workspaces.filter((w) => w.role === 'owner');
-          if (userWorkspaces.length === 0) {
-            const userName =
-              session.user.user_metadata?.full_name ||
-              session.user.email?.split('@')[0] ||
-              'Personal';
-            createWorkspace(`${userName}'s Etsy Hunter Shop`, 'plus');
-          }
-        }
+      if (session?.user) {
+        await loadUserData(session.user);
+      } else {
+        setWorkspace(null);
+        setSavedListings([]);
       }
+      setLoading(false);
     });
 
     return () => {
@@ -184,169 +154,259 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const activeWorkspace =
-    workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0] || null;
-
-  // Supabase Auth Methods
   const signInWithGoogle = async () => {
+    setAuthError(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
+        options: { redirectTo: window.location.origin }
       });
+      if (error) setAuthError(error.message);
       return { error: error ? new Error(error.message) : null };
     } catch (err: any) {
+      setAuthError(err?.message || 'Google authentication failed.');
       return { error: err };
     }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    setAuthError(null);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setAuthError(error.message);
       return { error: error ? new Error(error.message) : null };
     } catch (err: any) {
+      setAuthError(err?.message || 'Authentication failed.');
       return { error: err };
     }
   };
 
   const signUpWithEmail = async (email: string, password: string, fullName?: string) => {
+    setAuthError(null);
     try {
-      const { error, data } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: fullName || email.split('@')[0]
-          }
+          data: { full_name: fullName || email.split('@')[0] },
+          emailRedirectTo: window.location.origin
         }
       });
-
-      if (!error && data.user) {
-        // Automatically create a default Etsy Hunter Workspace
-        const wsName = fullName ? `${fullName}'s Etsy Shop` : `${email.split('@')[0]}'s Etsy Shop`;
-        createWorkspace(wsName, 'plus');
+      if (error) {
+        setAuthError(error.message);
+        return { data: null, error: new Error(error.message) };
       }
-
-      return { error: error ? new Error(error.message) : null };
+      // If user created but session is null, email verification is required by Supabase project
+      const needsEmailVerification = Boolean(data?.user && !data?.session);
+      return { data, error: null, needsEmailVerification };
     } catch (err: any) {
+      setAuthError(err?.message || 'Sign up failed.');
+      return { data: null, error: err };
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setAuthError(null);
+    try {
+      const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/#reset-password`
+      });
+      if (error) {
+        setAuthError(error.message);
+        return { error: new Error(error.message) };
+      }
+      return { error: null };
+    } catch (err: any) {
+      setAuthError(err?.message || 'Password reset request failed.');
       return { error: err };
     }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    setAuthError(null);
+    const result = await updateUserPassword(newPassword);
+    if (result.error) {
+      setAuthError(result.error.message);
+    }
+    return result;
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setWorkspace(null);
+    setSavedListings([]);
+    setSearchHistory([]);
+    setAuthError(null);
   };
 
-  // Workspace Multi-tenancy Methods
-  const switchWorkspace = (workspaceId: string) => {
-    if (workspaces.some((w) => w.id === workspaceId)) {
-      setActiveWorkspaceId(workspaceId);
+  // Client-side simulation of plan upgrade in non-live demo environments only
+  const updatePlan = (planId: 'starter' | 'pro' | 'agency') => {
+    const planConfig = PRICING_PLANS[planId];
+    if (!planConfig) return;
+
+    if (isLiveSupabaseConfigured) {
+      // In production live session, client cannot self-assign paid tiers directly
+      console.warn('Direct plan updates must be executed via verified payment gateway.');
+      return;
     }
+
+    setWorkspace((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        plan: planId,
+        creditsRemaining: planConfig.creditsPerMonth,
+        totalCredits: planConfig.creditsPerMonth,
+        maxSavedListings: planConfig.maxSavedListings
+      };
+    });
   };
 
-  const createWorkspace = (name: string, plan: 'free' | 'standard' | 'plus' = 'free'): WorkspaceData => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-    const newWs: WorkspaceData = {
-      id: `ws-${Date.now()}`,
-      name,
-      slug,
-      plan,
-      role: 'owner',
-      creditsRemaining: plan === 'plus' ? 500 : plan === 'standard' ? 250 : 100,
-      totalCredits: plan === 'plus' ? 500 : plan === 'standard' ? 250 : 100,
-      productsCount: 0,
-      membersCount: 1,
-      maxMembers: plan === 'plus' ? 20 : plan === 'standard' ? 10 : 3,
-      storageUsedMb: 0,
-      storageLimitMb: plan === 'plus' ? 5000 : plan === 'standard' ? 2000 : 500,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+  // Authoritative credit deduction
+  const consumeCredits = async (
+    amount: number,
+    metadata?: { keyword: string; pages: number; listingsFound: number }
+  ): Promise<boolean> => {
+    if (!workspace) return false;
+    if (workspace.creditsRemaining < amount) return false;
 
-    setWorkspaces((prev) => [newWs, ...prev]);
-    setActiveWorkspaceId(newWs.id);
-    return newWs;
-  };
+    if (isLiveSupabaseConfigured && user) {
+      // Authoritative Supabase RPC call
+      try {
+        const { data, error } = await (supabase as any).rpc('consume_research_credits', {
+          p_keyword: metadata?.keyword || 'Query',
+          p_pages: metadata?.pages || 1,
+          p_listings_count: metadata?.listingsFound || 0
+        });
 
-  const updateWorkspacePlan = (plan: 'free' | 'standard' | 'plus' | 'enterprise') => {
-    if (!activeWorkspace) return;
-    const additionalCredits = plan === 'enterprise' ? 2000 : plan === 'plus' ? 500 : plan === 'standard' ? 250 : 100;
-    setWorkspaces((prev) =>
-      prev.map((w) =>
-        w.id === activeWorkspace.id
-          ? {
-              ...w,
-              plan,
-              creditsRemaining: additionalCredits,
-              totalCredits: additionalCredits,
-              maxMembers: plan === 'enterprise' ? 100 : plan === 'plus' ? 20 : plan === 'standard' ? 10 : 3
-            }
-          : w
-      )
-    );
-  };
+        if (error || !data?.success) {
+          console.error('RPC consume_research_credits failed:', error);
+          return false;
+        }
 
-  const consumeCredit = (amount: number = 1): boolean => {
-    if (!activeWorkspace) return false;
-    if (activeWorkspace.creditsRemaining < amount) return false;
+        setWorkspace((prev) =>
+          prev ? { ...prev, creditsRemaining: data.credits_remaining } : null
+        );
+      } catch (err) {
+        console.error('Failed to consume credits via RPC:', err);
+        return false;
+      }
+    } else {
+      // Local fallback deduction
+      setWorkspace((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          creditsRemaining: Math.max(0, prev.creditsRemaining - amount)
+        };
+      });
+    }
 
-    setWorkspaces((prev) =>
-      prev.map((w) =>
-        w.id === activeWorkspace.id
-          ? { ...w, creditsRemaining: Math.max(0, w.creditsRemaining - amount) }
-          : w
-      )
-    );
+    if (metadata) {
+      const historyItem: ResearchSearchHistoryItem = {
+        id: `hist-${Date.now()}`,
+        keyword: metadata.keyword,
+        pagesRequested: metadata.pages,
+        creditsConsumed: amount,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        listingsFound: metadata.listingsFound
+      };
+      setSearchHistory((prev) => [historyItem, ...prev.slice(0, 49)]);
+    }
+
     return true;
   };
 
-  // Watchlist Methods (Workspace specific)
-  const activeWorkspaceWatchlist = watchlist.filter(
-    (item) => item.workspaceId === activeWorkspaceId
-  );
-
-  const isInWatchlist = (productId: string): boolean => {
-    return activeWorkspaceWatchlist.some((w) => w.productId === productId);
+  const isListingSaved = (productId: string): boolean => {
+    return savedListings.some((item) => item.productId === productId);
   };
 
-  const addToWatchlist = (product: EtsyProductItem, notes?: string) => {
-    if (isInWatchlist(product.id)) return;
+  const saveListing = async (
+    product: EtsyProductItem,
+    notes?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (isListingSaved(product.id)) {
+      return { success: false, error: 'Listing is already saved in your library.' };
+    }
 
-    const newItem: WatchlistItem = {
-      id: `watch-${Date.now()}`,
-      workspaceId: activeWorkspaceId,
+    const currentLimit = workspace?.maxSavedListings || 50;
+    if (savedListings.length >= currentLimit) {
+      return {
+        success: false,
+        error: `Saved listings quota reached (${savedListings.length}/${currentLimit}). Upgrade your plan in Settings to save more listings.`
+      };
+    }
+
+    const newItem: SavedListingItem = {
+      id: `saved-${Date.now()}`,
+      workspaceId: workspace?.id || 'ws-personal',
       productId: product.id,
       identifier: product.identifier,
       title: product.title,
       shopName: product.shopName,
-      price: product.price,
+      observedPrice: product.observedPrice,
       estimatedMonthlyRevenue: product.estimatedMonthlyRevenue,
       stage: product.stage,
       competition: product.competition,
       imageUrl: product.imageUrl,
       addedAt: 'Just now',
-      notes: notes || 'Pinned to shop radar',
-      alertOnUpdate: true
+      notes: notes || ''
     };
 
-    setWatchlist((prev) => [newItem, ...prev]);
+    if (isLiveSupabaseConfigured && user) {
+      const { error } = await supabase.from('saved_listings').insert({
+        user_id: user.id,
+        product_identifier: product.identifier,
+        title: product.title,
+        shop_name: product.shopName,
+        image_url: product.imageUrl,
+        category: product.category,
+        observed_price: product.observedPrice,
+        estimated_monthly_revenue: product.estimatedMonthlyRevenue,
+        competition_level: product.competition,
+        stage: product.stage,
+        tags: product.tags,
+        notes: notes || null
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+    }
+
+    setSavedListings((prev) => [newItem, ...prev]);
+    setWorkspace((prev) =>
+      prev ? { ...prev, savedListingsCount: prev.savedListingsCount + 1 } : null
+    );
+
+    return { success: true };
   };
 
-  const removeFromWatchlist = (productId: string) => {
-    setWatchlist((prev) =>
-      prev.filter((w) => !(w.workspaceId === activeWorkspaceId && w.productId === productId))
+  const removeSavedListing = async (productId: string) => {
+    if (isLiveSupabaseConfigured && user) {
+      await supabase
+        .from('saved_listings')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_identifier', productId);
+    }
+
+    setSavedListings((prev) => prev.filter((item) => item.productId !== productId));
+    setWorkspace((prev) =>
+      prev ? { ...prev, savedListingsCount: Math.max(0, prev.savedListingsCount - 1) } : null
     );
   };
 
-  const toggleWatchlist = (product: EtsyProductItem) => {
-    if (isInWatchlist(product.id)) {
-      removeFromWatchlist(product.id);
-    } else {
-      addToWatchlist(product);
+  const clearHistory = async () => {
+    if (isLiveSupabaseConfigured && user) {
+      await supabase
+        .from('research_history')
+        .delete()
+        .eq('user_id', user.id);
     }
+    setSearchHistory([]);
   };
 
   return (
@@ -356,21 +416,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         loading,
         isLiveSupabase: isLiveSupabaseConfigured,
-        workspaces,
-        activeWorkspace,
-        watchlist: activeWorkspaceWatchlist,
+        workspace,
+        savedListings,
+        searchHistory,
+        authError,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
+        resetPassword,
+        updatePassword,
         signOut,
-        switchWorkspace,
-        createWorkspace,
-        updateWorkspacePlan,
-        consumeCredit,
-        addToWatchlist,
-        removeFromWatchlist,
-        toggleWatchlist,
-        isInWatchlist
+        updatePlan,
+        consumeCredits,
+        saveListing,
+        removeSavedListing,
+        isListingSaved,
+        clearHistory
       }}
     >
       {children}

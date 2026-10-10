@@ -1,6 +1,6 @@
 {
-  "name": "Etsy Hunter AI",
-  "description": "AI-powered market research, demand validation, and winning product generator for Etsy, POD, and dropshipping sellers.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Etsy Hunter",
+  "description": "Product research and market intelligence tool built for Etsy sellers. Evaluate niches, inspect candidate tags, analyze observed marketplace signals, and model demand metrics.",
+  "requestFrame": "ALLOW_SAME_ORIGIN",
+  "capabilities": []
 }

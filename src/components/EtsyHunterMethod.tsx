@@ -1,31 +1,31 @@
 import React from 'react';
-import { Target, Search, BarChart3, Rocket, ArrowRight } from 'lucide-react';
+import { Target, Search, BarChart3, Bookmark, ArrowRight } from 'lucide-react';
 
 export const EtsyHunterMethod: React.FC = () => {
   const steps = [
     {
       number: '01',
-      title: 'Scan Buyer Cart Signals',
-      description: 'Etsy shows "In 20+ carts" tags on products that are currently being actively purchased. We track velocity shifts so you spot early momentum before search results become crowded.',
+      title: 'Define Target Keywords',
+      description: 'Enter one or more keyword phrases to search for listings. Review the estimated credit requirements before running the research search.',
       icon: Search
     },
     {
       number: '02',
-      title: 'Reverse Engineer All 13 Tags',
-      description: 'Etsy allows exactly 13 tags per listing. We unpack the exact long-tail keywords that competitors are using to dominate page 1 of search rankings.',
-      icon: Target
-    },
-    {
-      number: '03',
-      title: 'Simulate Margins & Unit Economics',
-      description: 'Calculate Printify / Gelato production costs, Etsy listing and payment fees, and shipping. Ensure listings target 65%+ net margins before launch.',
+      title: 'Analyze Listing Signals',
+      description: 'Review observed prices, shop ratings, and in-cart badges alongside modeled sales estimates and saturation scores.',
       icon: BarChart3
     },
     {
+      number: '03',
+      title: 'Simulate Margins & Costs',
+      description: 'Calculate item production blanks, packaging, shipping, and Etsy marketplace fees to estimate expected net margins.',
+      icon: Target
+    },
+    {
       number: '04',
-      title: 'Launch & Track Ranking Velocity',
-      description: 'Move winning ideas through your workspace research stages. Monitor competitor sales updates and adjust tags to defend your top position.',
-      icon: Rocket
+      title: 'Save & Track Candidates',
+      description: 'Organize high-opportunity listings in your personal library and export full datasets to CSV for external planning.',
+      icon: Bookmark
     }
   ];
 
@@ -34,13 +34,13 @@ export const EtsyHunterMethod: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mb-16 space-y-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18181f] border border-[#282835] text-xs font-mono text-[#707bfb]">
-            <span>THE 4-STEP RESEARCH METHOD</span>
+            <span>STRUCTURED RESEARCH PROCESS</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#f7f8f8]">
-            The Etsy Hunter System
+            The Etsy Hunter Workflow
           </h2>
           <p className="text-sm sm:text-base text-[#8a8f98] leading-relaxed">
-            A proven methodology applied by six-figure shops to turn speculative product ideas into predictable, passive cash flow.
+            A methodical four-step framework for discovering and evaluating product opportunities on Etsy.
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export const EtsyHunterMethod: React.FC = () => {
                 </div>
 
                 <div className="mt-8 pt-4 border-t border-[#22222b]/40 flex items-center gap-1 text-[11px] font-mono text-[#707bfb]">
-                  <span>Step {step.number} Protocol</span>
+                  <span>Step {step.number}</span>
                   <ArrowRight className="w-3 h-3" />
                 </div>
               </div>

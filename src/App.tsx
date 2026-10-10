@@ -15,11 +15,11 @@ import { EtsyHunterSEO } from './components/EtsyHunterSEO';
 import { EtsyTagAnalyzerModal } from './components/EtsyTagAnalyzerModal';
 import { EtsyProductDetailModal } from './components/EtsyProductDetailModal';
 import { EtsyProductItem, ResearchStage } from './types/etsyHunter';
-import { MOCK_ETSY_PRODUCTS } from './data/mockEtsyHunterData';
+import { DEMO_ETSY_PRODUCTS } from './data/mockEtsyHunterData';
 import { AlertCircle, X } from 'lucide-react';
 
 function AppContent() {
-  const { user, activeWorkspace, consumeCredit } = useAuth();
+  const { user, workspace } = useAuth();
 
   // Navigation mode: 'landing' | 'workspace'
   const [viewMode, setViewMode] = useState<'landing' | 'workspace'>('landing');
@@ -27,21 +27,21 @@ function AppContent() {
   // Active workspace tab
   const [workspaceTab, setWorkspaceTab] = useState<'board' | 'watchlist' | 'settings'>('board');
 
-  // Etsy Products State (stored in memory & localStorage)
+  // Products state: initialized empty for fresh user experience, with option to seed demo items
   const [products, setProducts] = useState<EtsyProductItem[]>(() => {
     const saved = localStorage.getItem('etsyhunter_products');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch {}
     }
-    return MOCK_ETSY_PRODUCTS;
+    return []; // Expected initial state for new users is 0
   });
 
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup'>('signup');
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup' | 'forgot_password'>('signup');
   const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
   const [isTagAnalyzerOpen, setIsTagAnalyzerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<EtsyProductItem | null>(null);
@@ -53,7 +53,7 @@ function AppContent() {
     localStorage.setItem('etsyhunter_products', JSON.stringify(products));
   }, [products]);
 
-  // Global Keyboard listener for Cmd+K and C (open tag analyzer)
+  // Global Keyboard listener for Cmd+K and Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -65,9 +65,6 @@ function AppContent() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandMenuOpen((prev) => !prev);
-      } else if (e.key.toLowerCase() === 'c' && !isInput && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setIsTagAnalyzerOpen(true);
       } else if (e.key === 'Escape') {
         setIsCommandMenuOpen(false);
         setIsTagAnalyzerOpen(false);
@@ -80,51 +77,40 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Update product stage (Trending -> High Potential -> Optimized -> Tracked)
+  // Update product stage
   const handleUpdateProductStage = (id: string, newStage: ResearchStage) => {
     setProducts((prev) =>
       prev.map((item) => (item.id === id ? { ...item, stage: newStage } : item))
     );
   };
 
-  // Add new product from Tag Analyzer
+  // Add new candidate product
   const handleAddProduct = (productData: Partial<EtsyProductItem>) => {
-    if (activeWorkspace && activeWorkspace.creditsRemaining <= 0) {
-      setCreditAlert(
-        `Etsy API scan quota reached (${activeWorkspace.totalCredits} scans used). Upgrade plan in Shop Settings to perform more scans.`
-      );
-      return;
-    }
-
-    consumeCredit(1);
-
-    const newIdNum = Math.floor(250 + Math.random() * 700);
+    const newIdNum = Math.floor(200 + Math.random() * 800);
     const newProduct: EtsyProductItem = {
       id: `prod-${Date.now()}`,
       identifier: `ETSY-${newIdNum}`,
-      title: productData.title || 'Untitled Etsy Listing',
-      shopName: productData.shopName || 'TrendingHuntShop',
-      shopRating: productData.shopRating || 4.95,
-      reviewsCount: productData.reviewsCount || 420,
+      title: productData.title || 'Candidate Listing',
+      shopName: productData.shopName || 'EvaluatedShop',
       imageUrl:
         productData.imageUrl ||
         'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=80',
-      price: productData.price || 28.5,
-      estimatedMonthlyRevenue: productData.estimatedMonthlyRevenue || 9800,
-      monthlySales: productData.monthlySales || 340,
-      monthlyViews: productData.monthlyViews || 18500,
-      inCartCount: productData.inCartCount || 16,
-      stage: productData.stage || 'trending',
-      competition: productData.competition || 'low',
       category: productData.category || 'Home & Living',
-      tags:
-        productData.tags && productData.tags.length > 0
-          ? productData.tags
-          : ['handmade gift', 'personalized item', 'trending etsy'],
+      tags: productData.tags || ['personalized gift', 'custom item'],
+      observedPrice: productData.observedPrice || 28.5,
+      observedShopRating: 4.9,
+      observedReviewsCount: 120,
+      observedInCartCount: 8,
+      observedIsBestseller: false,
+      observedIsSponsored: false,
+      estimatedMonthlyRevenue: productData.estimatedMonthlyRevenue || 9120,
+      estimatedMonthlySales: productData.estimatedMonthlySales || 320,
+      estimatedMonthlyViews: 14200,
       estimatedMarginPct: productData.estimatedMarginPct || 70,
-      etsyUrl: productData.etsyUrl || 'https://www.etsy.com',
-      isBestseller: productData.isBestseller ?? true,
-      notes: productData.notes || 'Added from Tag Analyzer.',
+      opportunityScore: productData.opportunityScore || 85,
+      competition: productData.competition || 'low',
+      stage: productData.stage || 'trending',
+      notes: productData.notes || 'Added from Product Research Explorer.',
       createdAt: 'Just now'
     };
 
@@ -143,9 +129,9 @@ function AppContent() {
     setProducts((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Seed sample products
-  const handleSeedSampleProducts = () => {
-    setProducts(MOCK_ETSY_PRODUCTS);
+  // Seed sample demonstration listings
+  const handleSeedDemoData = () => {
+    setProducts(DEMO_ETSY_PRODUCTS);
   };
 
   const handleLoginSuccess = () => {
@@ -158,7 +144,7 @@ function AppContent() {
       <EtsyHunterSEO
         viewMode={viewMode}
         activeTab={workspaceTab}
-        workspaceName={activeWorkspace?.name}
+        workspaceName={workspace?.name}
         selectedProduct={selectedProduct}
       />
 
@@ -167,7 +153,7 @@ function AppContent() {
         <div className="fixed top-3 right-3 z-50 max-w-md p-3 rounded-xl bg-[#121216] border border-[#e5484d] text-xs text-[#f7f8f8] shadow-2xl flex items-start gap-2.5 animate-in slide-in-from-top-2">
           <AlertCircle className="w-4 h-4 text-[#e5484d] shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">
-            <span className="font-semibold text-[#e5484d]">Scan Quota Reached</span>
+            <span className="font-semibold text-[#e5484d]">Research Credits Exhausted</span>
             <p className="text-[#8a8f98] mt-0.5">{creditAlert}</p>
           </div>
           <button
@@ -180,7 +166,7 @@ function AppContent() {
       )}
 
       {viewMode === 'workspace' ? (
-        /* Full Etsy Hunter Workspace Dashboard */
+        /* Authenticated Personal Workspace */
         <EtsyHunterWorkspace
           onBackToLanding={() => setViewMode('landing')}
           onOpenTagAnalyzer={() => setIsTagAnalyzerOpen(true)}
@@ -193,7 +179,7 @@ function AppContent() {
           onUpdateProductStage={handleUpdateProductStage}
           activeTab={workspaceTab}
           onTabChange={setWorkspaceTab}
-          onSeedSampleProducts={handleSeedSampleProducts}
+          onSeedSampleProducts={handleSeedDemoData}
         />
       ) : (
         /* Public Landing Page */
@@ -216,7 +202,7 @@ function AppContent() {
                 setIsAuthOpen(true);
               }}
               onOpenWorkspace={() => setViewMode('workspace')}
-              onOpenTagAnalyzer={() => setIsTagAnalyzerOpen(true)}
+              onOpenResearch={() => setIsTagAnalyzerOpen(true)}
             />
 
             {/* 3. Board Preview */}
@@ -228,16 +214,16 @@ function AppContent() {
               }}
             />
 
-            {/* 4. Power Sellers & Brands */}
+            {/* 4. Supported Categories & Workflows */}
             <EtsyHunterCustomers />
 
             {/* 5. Features Grid */}
             <EtsyHunterFeatures />
 
-            {/* 6. The Etsy Hunter Method */}
+            {/* 6. Research Method */}
             <EtsyHunterMethod />
 
-            {/* 7. Pricing Section */}
+            {/* 7. Centralized Pricing Section */}
             <EtsyHunterPricing
               onOpenAuth={(mode = 'signup') => {
                 setAuthInitialMode(mode);
@@ -287,7 +273,7 @@ function AppContent() {
         onDeleteProduct={handleDeleteProduct}
       />
 
-      {/* Supabase Auth Modal (/signup & /login) */}
+      {/* Auth Modal (/signup, /login, /forgot_password) */}
       <EtsyHunterAuthModal
         isOpen={isAuthOpen}
         initialMode={authInitialMode}

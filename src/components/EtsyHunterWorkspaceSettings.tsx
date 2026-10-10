@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import {
-  Settings,
   CreditCard,
-  Users,
-  HardDrive,
   Check,
-  Plus,
-  Trash2,
-  Sparkles,
   Zap,
-  ShieldCheck,
-  Store,
+  HardDrive,
   Layers,
-  ArrowRight
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Bookmark,
+  History,
+  Trash2,
+  Key,
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { WorkspaceData } from '../services/supabase';
+import { PRICING_PLANS } from '../config/pricing';
 
 interface EtsyHunterWorkspaceSettingsProps {
   onClose?: () => void;
@@ -23,35 +24,61 @@ interface EtsyHunterWorkspaceSettingsProps {
 
 export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsProps> = ({ onClose }) => {
   const {
-    activeWorkspace,
-    workspaces,
-    createWorkspace,
-    switchWorkspace,
-    updateWorkspacePlan
+    user,
+    workspace,
+    updatePlan,
+    searchHistory,
+    clearHistory,
+    isLiveSupabase,
+    updatePassword
   } = useAuth();
 
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<'free' | 'standard' | 'plus'>('standard');
-  const [isCreating, setIsCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (!activeWorkspace) return null;
+  // Password update form state
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
-  const handleCreateWorkspace = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWorkspaceName.trim()) return;
+  if (!workspace) return null;
 
-    createWorkspace(newWorkspaceName.trim(), selectedPlan);
-    setNewWorkspaceName('');
-    setIsCreating(false);
-    setSaveMessage('New Etsy shop workspace created successfully!');
-    setTimeout(() => setSaveMessage(null), 3000);
+  const isPaidPlan = workspace.plan !== 'none';
+  const currentPlan = workspace.plan !== 'none' ? PRICING_PLANS[workspace.plan as 'starter' | 'pro' | 'agency'] : null;
+
+  const handlePlanUpgrade = (planId: 'starter' | 'pro' | 'agency') => {
+    setErrorMessage(null);
+    if (isLiveSupabase) {
+      setErrorMessage(
+        'Direct self-assignment is disabled in production. Paid subscriptions require verified checkout (scheduled for M2 billing integration).'
+      );
+      setTimeout(() => setErrorMessage(null), 5000);
+      return;
+    }
+
+    // Demo Mode simulation
+    updatePlan(planId);
+    setSaveMessage(`[Demo Mode] Switched to ${PRICING_PLANS[planId].name} plan. Research credits and listing quotas updated.`);
+    setTimeout(() => setSaveMessage(null), 4000);
   };
 
-  const handlePlanUpgrade = (plan: 'free' | 'standard' | 'plus' | 'enterprise') => {
-    updateWorkspacePlan(plan);
-    setSaveMessage(`Workspace plan updated to ${plan.toUpperCase()}! API scan credits refreshed.`);
-    setTimeout(() => setSaveMessage(null), 3000);
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordStatus('Password must be at least 6 characters.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordStatus(null);
+    const { error } = await updatePassword(newPassword);
+    setPasswordLoading(false);
+    if (error) {
+      setPasswordStatus(`Error: ${error.message}`);
+    } else {
+      setPasswordStatus('Password successfully updated.');
+      setNewPassword('');
+      setTimeout(() => setPasswordStatus(null), 4000);
+    }
   };
 
   return (
@@ -60,26 +87,30 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[#121216] border border-[#22222b]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Store className="w-4 h-4 text-[#5e6ad2]" />
             <h2 className="text-lg font-bold text-[#f7f8f8]">
-              {activeWorkspace.name} — Shop Settings
+              Personal Workspace Settings
             </h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#18181f] text-[#707bfb] border border-[#282835] uppercase">
-              {activeWorkspace.plan}
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border uppercase font-semibold ${
+                isPaidPlan
+                  ? 'bg-[#18181f] text-[#707bfb] border-[#282835]'
+                  : 'bg-[#18181f] text-[#8a8f98] border-[#282835]'
+              }`}
+            >
+              {isPaidPlan ? `${currentPlan?.name} Plan` : 'No Active Subscription'}
             </span>
           </div>
           <p className="text-xs text-[#8a8f98]">
-            Manage Etsy shop configurations, team member seats, and live API scan quotas.
+            Manage your personal research credits, saved listing quotas, and plan tier.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          className="px-3.5 py-1.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-medium flex items-center gap-1.5 transition-all shadow-[0_0_16px_rgba(94,106,210,0.35)] cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Etsy Workspace</span>
-        </button>
+        <div className="text-right">
+          <span className="text-xs text-[#8a8f98] block">Billing Rate</span>
+          <span className="text-sm font-bold text-[#f7f8f8]">
+            {isPaidPlan ? `$${currentPlan?.price}/month` : '$0 / month'}
+          </span>
+        </div>
       </div>
 
       {saveMessage && (
@@ -89,89 +120,29 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
         </div>
       )}
 
-      {/* Workspace Creation Form Modal/Card */}
-      {isCreating && (
-        <form
-          onSubmit={handleCreateWorkspace}
-          className="p-6 rounded-2xl bg-[#121216] border border-[#5e6ad2] shadow-2xl space-y-4 animate-in slide-in-from-top-2"
-        >
-          <h3 className="text-sm font-bold text-[#f7f8f8]">
-            Create Additional Etsy Shop Workspace
-          </h3>
-
-          <div>
-            <label className="block text-xs text-[#8a8f98] mb-1.5">
-              Shop or Brand Name
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. AuraCraft Apparel, Lumina Digital Goods"
-              value={newWorkspaceName}
-              onChange={(e) => setNewWorkspaceName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[#18181f] border border-[#282835] text-xs text-[#f7f8f8] placeholder-[#575a65] focus:outline-none focus:border-[#5e6ad2]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-[#8a8f98] mb-1.5">
-              Starting Tier Plan
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {(['free', 'standard', 'plus'] as const).map((tier) => (
-                <button
-                  key={tier}
-                  type="button"
-                  onClick={() => setSelectedPlan(tier)}
-                  className={`p-3 rounded-lg border text-left text-xs transition-colors cursor-pointer ${
-                    selectedPlan === tier
-                      ? 'border-[#5e6ad2] bg-[#18181f] text-white'
-                      : 'border-[#282835] bg-[#0e0e13] text-[#8a8f98] hover:border-[#383848]'
-                  }`}
-                >
-                  <div className="font-semibold capitalize text-[#f7f8f8]">{tier}</div>
-                  <div className="text-[10px] text-[#575a65] mt-0.5">
-                    {tier === 'plus' ? '500 Scans' : tier === 'standard' ? '250 Scans' : '100 Scans'}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-lg bg-[#5e6ad2] text-white text-xs font-semibold hover:bg-[#6875e5] cursor-pointer"
-            >
-              Confirm &amp; Provision Workspace
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg bg-[#18181f] text-[#8a8f98] text-xs hover:text-white cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
       )}
 
       {/* Real-time Usage Limits & Quotas */}
       <div className="space-y-4">
         <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-          Live Quotas &amp; Scan Meters
+          Active Research Quotas
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Etsy API Credits Meter */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Research Credits Meter */}
           <div className="p-5 rounded-xl bg-[#121216] border border-[#22222b] space-y-3">
             <div className="flex items-center justify-between text-xs text-[#8a8f98]">
               <div className="flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-[#5e6ad2]" />
-                <span>Etsy API &amp; Scan Credits</span>
+                <span className="font-medium text-[#f7f8f8]">Research Credits</span>
               </div>
               <span className="font-mono text-[#f7f8f8] font-bold">
-                {activeWorkspace.creditsRemaining} / {activeWorkspace.totalCredits}
+                {workspace.creditsRemaining} / {workspace.totalCredits} remaining
               </span>
             </div>
 
@@ -179,28 +150,29 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
               <div
                 className="h-full bg-gradient-to-r from-[#5e6ad2] to-[#707bfb] rounded-full transition-all duration-300"
                 style={{
-                  width: `${Math.min(
-                    100,
-                    (activeWorkspace.creditsRemaining / activeWorkspace.totalCredits) * 100
-                  )}%`
+                  width: `${
+                    workspace.totalCredits > 0
+                      ? Math.min(100, Math.round((workspace.creditsRemaining / workspace.totalCredits) * 100))
+                      : 0
+                  }%`
                 }}
               />
             </div>
 
             <p className="text-[11px] text-[#575a65]">
-              Consumed when scraping seller tags or fetching live cart counts. Refreshes monthly.
+              1 credit = 1 keyword search page (approx. up to 36 listings). Resets monthly upon payment renewal.
             </p>
           </div>
 
-          {/* Team Seats */}
+          {/* Saved Listings Library Meter */}
           <div className="p-5 rounded-xl bg-[#121216] border border-[#22222b] space-y-3">
             <div className="flex items-center justify-between text-xs text-[#8a8f98]">
               <div className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-[#30a46c]" />
-                <span>Team Seats Active</span>
+                <Bookmark className="w-3.5 h-3.5 text-[#30a46c]" />
+                <span className="font-medium text-[#f7f8f8]">Saved Listings</span>
               </div>
               <span className="font-mono text-[#f7f8f8] font-bold">
-                {activeWorkspace.membersCount} / {activeWorkspace.maxMembers}
+                {workspace.savedListingsCount} / {workspace.maxSavedListings} used
               </span>
             </div>
 
@@ -208,142 +180,188 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
               <div
                 className="h-full bg-[#30a46c] rounded-full"
                 style={{
-                  width: `${(activeWorkspace.membersCount / activeWorkspace.maxMembers) * 100}%`
+                  width: `${
+                    workspace.maxSavedListings > 0
+                      ? Math.min(100, Math.round((workspace.savedListingsCount / workspace.maxSavedListings) * 100))
+                      : 0
+                  }%`
                 }}
               />
             </div>
 
             <p className="text-[11px] text-[#575a65]">
-              Virtual assistants and copywriters with shared access to this research radar.
+              Candidate product listings saved to your personal library for analysis and monitoring.
             </p>
           </div>
+        </div>
+      </div>
 
-          {/* Database Storage */}
-          <div className="p-5 rounded-xl bg-[#121216] border border-[#22222b] space-y-3">
-            <div className="flex items-center justify-between text-xs text-[#8a8f98]">
-              <div className="flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-[#f5d90a]" />
-                <span>Data Cache Usage</span>
-              </div>
-              <span className="font-mono text-[#f7f8f8] font-bold">
-                {activeWorkspace.storageUsedMb} MB / {activeWorkspace.storageLimitMb} MB
-              </span>
-            </div>
+      {/* Subscription Plans Selection */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
+            Subscription Tiers
+          </h3>
+          {isLiveSupabase ? (
+            <span className="text-[10px] text-[#8a8f98] font-mono">
+              Live Checkout arriving in M2
+            </span>
+          ) : (
+            <span className="text-[10px] text-[#707bfb] font-mono">
+              Demo Simulation Mode
+            </span>
+          )}
+        </div>
 
-            <div className="w-full h-2 rounded-full bg-[#18181f] overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(['starter', 'pro', 'agency'] as const).map((planKey) => {
+            const plan = PRICING_PLANS[planKey];
+            const isCurrent = workspace.plan === planKey;
+
+            return (
               <div
-                className="h-full bg-[#f5d90a] rounded-full"
-                style={{
-                  width: `${(activeWorkspace.storageUsedMb / activeWorkspace.storageLimitMb) * 100}%`
-                }}
-              />
-            </div>
+                key={planKey}
+                className={`p-5 rounded-xl bg-[#121216] border transition-all flex flex-col justify-between ${
+                  isCurrent
+                    ? 'border-[#5e6ad2] bg-[#18181f]'
+                    : 'border-[#22222b] hover:border-[#383848]'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-[#f7f8f8]">{plan.name}</h4>
+                    {isCurrent && (
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#5e6ad2]/20 text-[#707bfb]">
+                        Active
+                      </span>
+                    )}
+                  </div>
 
-            <p className="text-[11px] text-[#575a65]">
-              Saved historical bestseller ranks and high-res listing thumbnail caches.
-            </p>
-          </div>
+                  <div className="text-2xl font-extrabold text-[#f7f8f8] mb-1">
+                    ${plan.price}
+                    <span className="text-xs text-[#8a8f98] font-normal"> / month</span>
+                  </div>
+
+                  <p className="text-xs text-[#8a8f98] mb-4">
+                    {plan.description}
+                  </p>
+
+                  <ul className="space-y-1.5 text-xs text-[#8a8f98] mb-5">
+                    {plan.features.slice(0, 4).map((f, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <Check className="w-3 h-3 text-[#30a46c] shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {isCurrent ? (
+                  <div className="w-full py-2 rounded bg-[#18181f] text-center text-xs text-[#575a65] font-mono border border-[#282835]">
+                    Current Plan
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handlePlanUpgrade(planKey)}
+                    className="w-full py-2 rounded bg-[#5e6ad2]/20 hover:bg-[#5e6ad2] text-[#707bfb] hover:text-white border border-[#5e6ad2]/40 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    {isLiveSupabase ? `Upgrade to ${plan.name} (M2)` : `Switch to ${plan.name} (Demo)`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Plan Upgrades */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-          Upgrade or Switch Workspace Plan
-        </h3>
+      {/* Account Security & Password */}
+      {user && (
+        <div className="space-y-4">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
+            Account Security
+          </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(
-            [
-              { tier: 'free', price: '$0', scans: 100, seats: 3 },
-              { tier: 'standard', price: '$19/mo', scans: 250, seats: 10 },
-              { tier: 'plus', price: '$39/mo', scans: 500, seats: 20 },
-              { tier: 'enterprise', price: '$99/mo', scans: 2000, seats: 100 }
-            ] as const
-          ).map((item) => (
-            <div
-              key={item.tier}
-              className={`p-4 rounded-xl bg-[#121216] border transition-all flex flex-col justify-between ${
-                activeWorkspace.plan === item.tier
-                  ? 'border-[#5e6ad2] bg-[#18181f]'
-                  : 'border-[#22222b] hover:border-[#333342]'
-              }`}
-            >
+          <div className="p-5 rounded-xl bg-[#121216] border border-[#22222b] space-y-4">
+            <div className="flex items-center justify-between text-xs">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-bold uppercase text-[#f7f8f8]">{item.tier}</h4>
-                  {activeWorkspace.plan === item.tier && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#5e6ad2]/20 text-[#707bfb]">
-                      Active
-                    </span>
-                  )}
-                </div>
+                <span className="font-semibold text-[#f7f8f8]">Email: </span>
+                <span className="text-[#8a8f98]">{user.email}</span>
+              </div>
+            </div>
 
-                <div className="text-xl font-extrabold text-[#f7f8f8] mb-3">{item.price}</div>
-
-                <ul className="space-y-1.5 text-[11px] text-[#8a8f98] mb-4">
-                  <li>• {item.scans} Scans / mo</li>
-                  <li>• Up to {item.seats} seats</li>
-                </ul>
+            <form onSubmit={handleUpdatePassword} className="space-y-3 pt-2 border-t border-[#22222b]">
+              <label className="block text-xs font-medium text-[#8a8f98]">
+                Update Password
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="password"
+                  placeholder="New password (min 6 characters)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg bg-[#18181f] border border-[#282835] text-xs text-[#f7f8f8] placeholder-[#575a65] focus:outline-none focus:border-[#5e6ad2]"
+                />
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="py-2 px-4 rounded-lg bg-[#18181f] hover:bg-[#22222e] border border-[#282835] text-xs font-semibold text-[#f7f8f8] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Updating...' : 'Change Password'}
+                </button>
               </div>
 
-              {activeWorkspace.plan === item.tier ? (
-                <div className="w-full py-1.5 rounded bg-[#18181f] text-center text-[11px] text-[#575a65] font-mono border border-[#282835]">
-                  Current Tier
-                </div>
-              ) : (
-                <button
-                  onClick={() => handlePlanUpgrade(item.tier)}
-                  className="w-full py-1.5 rounded bg-[#5e6ad2]/20 hover:bg-[#5e6ad2] text-[#707bfb] hover:text-white border border-[#5e6ad2]/40 text-[11px] font-medium transition-colors cursor-pointer"
-                >
-                  Switch to {item.tier}
-                </button>
+              {passwordStatus && (
+                <p className={`text-xs ${passwordStatus.startsWith('Error') ? 'text-[#e5484d]' : 'text-[#30a46c]'}`}>
+                  {passwordStatus}
+                </p>
               )}
-            </div>
-          ))}
+            </form>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Switch Across Existing Workspaces */}
+      {/* Research History Section */}
       <div className="space-y-4">
-        <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-          Your Managed Etsy Shops ({workspaces.length})
-        </h3>
-
-        <div className="rounded-xl bg-[#121216] border border-[#22222b] divide-y divide-[#22222b]/60 overflow-hidden">
-          {workspaces.map((ws) => (
-            <div
-              key={ws.id}
-              className="p-4 flex items-center justify-between hover:bg-[#18181f]/40 transition-colors"
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
+            Recent Research Query History ({searchHistory.length})
+          </h3>
+          {searchHistory.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="text-xs text-[#8a8f98] hover:text-[#e5484d] flex items-center gap-1 cursor-pointer"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#5e6ad2]/20 border border-[#5e6ad2]/40 flex items-center justify-center text-[#707bfb] font-bold text-xs">
-                  {ws.name.charAt(0)}
-                </div>
+              <Trash2 className="w-3 h-3" />
+              <span>Clear History</span>
+            </button>
+          )}
+        </div>
+
+        {searchHistory.length > 0 ? (
+          <div className="rounded-xl bg-[#121216] border border-[#22222b] divide-y divide-[#22222b]/60 overflow-hidden text-xs">
+            {searchHistory.slice(0, 10).map((h) => (
+              <div key={h.id} className="p-3.5 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-[#f7f8f8]">{ws.name}</div>
-                  <div className="text-[10px] text-[#8a8f98] font-mono">
-                    ID: {ws.id} · {ws.plan.toUpperCase()} · Created {ws.createdAt}
+                  <span className="font-semibold text-[#f7f8f8]">{h.keyword}</span>
+                  <div className="text-[11px] text-[#8a8f98] mt-0.5">
+                    {h.pagesRequested} page{h.pagesRequested > 1 ? 's' : ''} queried · {h.listingsFound} listings evaluated
                   </div>
                 </div>
-              </div>
 
-              {ws.id === activeWorkspace.id ? (
-                <span className="text-xs text-[#30a46c] flex items-center gap-1 font-medium">
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Current Active</span>
-                </span>
-              ) : (
-                <button
-                  onClick={() => switchWorkspace(ws.id)}
-                  className="px-3 py-1 rounded-md bg-[#18181f] hover:bg-[#22222b] border border-[#282835] text-xs text-[#f7f8f8] transition-colors cursor-pointer"
-                >
-                  Switch Shop
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+                <div className="text-right">
+                  <span className="font-mono text-[#707bfb] font-medium">
+                    -{h.creditsConsumed} credit{h.creditsConsumed > 1 ? 's' : ''}
+                  </span>
+                  <div className="text-[10px] text-[#575a65]">{h.timestamp}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center rounded-xl bg-[#121216] border border-[#22222b] text-xs text-[#8a8f98]">
+            No research searches executed in this session yet.
+          </div>
+        )}
       </div>
     </div>
   );
