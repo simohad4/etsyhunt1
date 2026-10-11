@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, ArrowLeft, LoaderCircle, LockKeyhole, ShieldX } from 'lucide-react';
 import { EtsyHunterLogo } from './EtsyHunterLogo';
+import { DashboardLoadingSkeleton } from './dashboard/DashboardUI';
 
 interface RouteStateFrameProps {
   icon: React.ReactNode;
@@ -23,7 +24,16 @@ const RouteStateFrame: React.FC<RouteStateFrameProps> = ({ icon, title, descript
   </main>
 );
 
-export const RouteLoadingState: React.FC<{ label?: string }> = ({ label = 'Restoring your secure session…' }) => (
+export const RouteLoadingState: React.FC<{ label?: string; dashboard?: boolean }> = ({
+  label = 'Restoring your secure session…',
+  dashboard = false
+}) => dashboard ? (
+  <main className="min-h-screen bg-[#0b0b0f] p-4 text-[#f7f8f8] sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-7xl">
+      <DashboardLoadingSkeleton label={label} />
+    </div>
+  </main>
+) : (
   <RouteStateFrame icon={<LoaderCircle className="w-5 h-5 animate-spin" />} title="Loading Etsy Hunter" description={label} />
 );
 

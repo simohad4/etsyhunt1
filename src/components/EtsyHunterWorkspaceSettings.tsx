@@ -3,20 +3,21 @@ import {
   CreditCard,
   Check,
   Zap,
-  HardDrive,
-  Layers,
-  Sparkles,
-  ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Bookmark,
   History,
   Trash2,
-  Key,
-  AlertCircle,
-  Lock
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PRICING_PLANS } from '../config/pricing';
+import {
+  DashboardEmptyState,
+  DashboardPageHeader,
+  DashboardSectionCard,
+  DashboardStatusIndicator
+} from './dashboard/DashboardUI';
 
 interface EtsyHunterWorkspaceSettingsProps {
   onClose?: () => void;
@@ -83,35 +84,42 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12 animate-in fade-in duration-150">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[#121216] border border-[#22222b]">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-bold text-[#f7f8f8]">
-              Personal Workspace Settings
-            </h2>
-            <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border uppercase font-semibold ${
-                isPaidPlan
-                  ? 'bg-[#18181f] text-[#707bfb] border-[#282835]'
-                  : 'bg-[#18181f] text-[#8a8f98] border-[#282835]'
-              }`}
-            >
-              {isPaidPlan ? `${currentPlan?.name} Plan` : 'No Active Subscription'}
-            </span>
+      <DashboardPageHeader
+        eyebrow="Customer workspace"
+        title="Plan & quotas"
+        description="Manage your account security and review the plan limits stored for your authenticated workspace."
+        icon={<CreditCard className="h-5 w-5" />}
+        meta={
+          <div className="flex flex-wrap items-center gap-2">
+            <DashboardStatusIndicator label="Supabase workspace" tone="success" />
+            <DashboardStatusIndicator
+              label={isPaidPlan ? `${currentPlan?.name} plan` : 'No active subscription'}
+              tone={isPaidPlan ? 'info' : 'neutral'}
+              dot={false}
+            />
           </div>
-          <p className="text-xs text-[#8a8f98]">
-            Manage your personal research credits, saved listing quotas, and plan tier.
-          </p>
-        </div>
-
-        <div className="text-right">
-          <span className="text-xs text-[#8a8f98] block">Billing Rate</span>
-          <span className="text-sm font-bold text-[#f7f8f8]">
-            {isPaidPlan ? `$${currentPlan?.price}/month` : '$0 / month'}
-          </span>
-        </div>
-      </div>
+        }
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <span className="block text-[10px] text-[#8a8f98]">Billing rate</span>
+              <span className="font-mono text-xs font-semibold text-[#f7f8f8]">
+                {isPaidPlan ? `$${currentPlan?.price}/month` : '$0 / month'}
+              </span>
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#282835] bg-[#18181f] px-3 text-xs font-medium text-[#f7f8f8] transition-colors hover:bg-[#22222b]"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Board
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {saveMessage && (
         <div className="p-3 rounded-xl bg-[#299764]/10 border border-[#299764]/30 text-xs text-[#30a46c] flex items-center gap-2">
@@ -276,12 +284,12 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
 
       {/* Account Security & Password */}
       {user && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-            Account Security
-          </h3>
-
-          <div className="p-5 rounded-xl bg-[#121216] border border-[#22222b] space-y-4">
+        <DashboardSectionCard
+          title="Account security"
+          description="Update the password for your authenticated Etsy Hunter account."
+          icon={<ShieldCheck className="h-4 w-4" />}
+          bodyClassName="space-y-4 p-4 sm:p-5"
+        >
             <div className="flex items-center justify-between text-xs">
               <div>
                 <span className="font-semibold text-[#f7f8f8]">Email: </span>
@@ -316,17 +324,15 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
                 </p>
               )}
             </form>
-          </div>
-        </div>
+        </DashboardSectionCard>
       )}
 
       {/* Research History Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-            Recent Research Query History ({searchHistory.length})
-          </h3>
-          {searchHistory.length > 0 && (
+      <DashboardSectionCard
+        title={`Recent research query history (${searchHistory.length})`}
+        description="Queries loaded from the authenticated workspace."
+        icon={<History className="h-4 w-4" />}
+        action={searchHistory.length > 0 ? (
             <button
               onClick={clearHistory}
               className="text-xs text-[#8a8f98] hover:text-[#e5484d] flex items-center gap-1 cursor-pointer"
@@ -334,11 +340,11 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
               <Trash2 className="w-3 h-3" />
               <span>Clear History</span>
             </button>
-          )}
-        </div>
-
+        ) : undefined}
+        bodyClassName={searchHistory.length > 0 ? 'p-0' : 'p-4'}
+      >
         {searchHistory.length > 0 ? (
-          <div className="rounded-xl bg-[#121216] border border-[#22222b] divide-y divide-[#22222b]/60 overflow-hidden text-xs">
+          <div className="divide-y divide-[#22222b]/60 text-xs">
             {searchHistory.slice(0, 10).map((h) => (
               <div key={h.id} className="p-3.5 flex items-center justify-between">
                 <div>
@@ -358,11 +364,13 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center rounded-xl bg-[#121216] border border-[#22222b] text-xs text-[#8a8f98]">
-            No research searches executed in this session yet.
-          </div>
+          <DashboardEmptyState
+            title="No research history yet"
+            description="Completed workspace queries will appear here when history records are available."
+            icon={<History className="h-5 w-5" />}
+          />
         )}
-      </div>
+      </DashboardSectionCard>
     </div>
   );
 };

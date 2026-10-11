@@ -30,6 +30,8 @@ import {
   RouteNotFoundState
 } from './components/AppRouteStates';
 
+const DEMO_PRODUCT_IDS = new Set(DEMO_ETSY_PRODUCTS.map((product) => product.id));
+
 function AppContent() {
   const {
     user,
@@ -56,6 +58,13 @@ function AppContent() {
 
   // Authenticated product-board state is session-only and never shared with the public demo.
   const [products, setProducts] = useState<EtsyProductItem[]>([]);
+  const boardDataSource = products.length === 0
+    ? 'empty'
+    : products.every((product) => DEMO_PRODUCT_IDS.has(product.id))
+      ? 'demo'
+      : products.some((product) => DEMO_PRODUCT_IDS.has(product.id))
+        ? 'mixed'
+        : 'session';
 
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -203,7 +212,7 @@ function AppContent() {
 
       {route.scope === 'customer' ? (
         loading ? (
-          <RouteLoadingState />
+          <RouteLoadingState dashboard />
         ) : !isLiveSupabase ? (
           <RouteAccessState kind="unavailable" message={authError || 'Supabase authentication is not configured.'} onHome={() => navigate('/')} />
         ) : !user || !session ? (
@@ -222,6 +231,8 @@ function AppContent() {
               setIsProductDetailOpen(true);
             }}
             products={products}
+            boardDataSource={boardDataSource}
+            demoProductIds={DEMO_PRODUCT_IDS}
             onUpdateProductStage={handleUpdateProductStage}
             activeTab={workspaceTab}
             onTabChange={(tab) => navigate(customerPathForPage(tab === 'watchlist' ? 'saved' : tab))}
