@@ -29,6 +29,11 @@ import {
   getSavedListingQuotaMessage
 } from '../security/savedListingEntitlements';
 
+interface WorkspaceMutationResult {
+  success: boolean;
+  error?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -50,12 +55,11 @@ interface AuthContextType {
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
   updateRecoveredPassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updatePlan: (plan: 'starter' | 'pro' | 'agency') => void;
-  consumeCredits: (amount: number, metadata?: { keyword: string; pages: number; listingsFound: number }) => Promise<boolean>;
-  saveListing: (product: EtsyProductItem, notes?: string) => Promise<{ success: boolean; error?: string }>;
-  removeSavedListing: (productId: string) => Promise<void>;
+  reloadWorkspace: () => Promise<void>;
+  saveListing: (product: EtsyProductItem, notes?: string) => Promise<WorkspaceMutationResult>;
+  removeSavedListing: (productId: string) => Promise<WorkspaceMutationResult>;
   isListingSaved: (productId: string) => boolean;
-  clearHistory: () => void;
+  clearHistory: () => Promise<WorkspaceMutationResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
   const activeUserIdRef = useRef<string | null>(null);
   const privateStateVersionRef = useRef(0);
+  const privateStateLoadingRef = useRef(false);
 
   // Supabase is authoritative for all private workspace data.
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
@@ -92,7 +97,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return privateStateVersionRef.current;
   };
 
-  const loadUserData = async (currentUser: User, expectedVersion: number) => {
+  const fetchAndApplyPrivateState = async (
+    currentUser: User,
+    expectedVersion: number
+  ): Promise<WorkspaceMutationResult> => {
     try {
       const { workspace: ws, savedListings: listings, searchHistory: history } = await fetchUserWorkspaceData(currentUser);
       if (!canApplyPrivateStateLoad(
@@ -101,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser.id,
         expectedVersion
       )) {
-        return;
+        return { success: false, error: 'The authenticated account changed before the workspace refresh completed.' };
       }
 
       const authoritativeState = createAuthoritativeUserPrivateState(
@@ -113,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setWorkspace(authoritativeState.workspace);
       setSavedListings(authoritativeState.savedListings);
       setSearchHistory(authoritativeState.searchHistory);
+      return { success: true };
     } catch (err: any) {
       if (!canApplyPrivateStateLoad(
         activeUserIdRef.current,
@@ -120,11 +129,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser.id,
         expectedVersion
       )) {
-        return;
+        return { success: false, error: 'The authenticated account changed before the workspace refresh completed.' };
       }
       console.error('Failed to load user workspace data:', err);
-      setAuthError(err.message || 'Failed to initialize workspace data.');
+      return { success: false, error: err.message || 'Failed to initialize workspace data.' };
     }
+  };
+
+  const loadUserData = async (currentUser: User, expectedVersion: number) => {
+    const result = await fetchAndApplyPrivateState(currentUser, expectedVersion);
+    if (!canApplyPrivateStateLoad(
+      activeUserIdRef.current,
+      privateStateVersionRef.current,
+      currentUser.id,
+      expectedVersion
+    )) {
+      return;
+    }
+
+    setAuthError(result.success ? null : result.error || 'Failed to initialize workspace data.');
+  };
+
+  const invalidatePrivateStateAfterRefreshFailure = (
+    currentUser: User,
+    expectedVersion: number,
+    message: string
+  ) => {
+    if (!canApplyPrivateStateLoad(
+      activeUserIdRef.current,
+      privateStateVersionRef.current,
+      currentUser.id,
+      expectedVersion
+    )) {
+      return;
+    }
+
+    clearPrivateState(currentUser.id);
+    setAuthError(message);
   };
 
   // Handle Supabase Auth state changes
@@ -182,9 +223,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(nextUser);
 
       if (!nextUser) {
+        privateStateLoadingRef.current = false;
         clearPrivateState(null);
         if (!recoveryEventState && !recoveryRedirect.error) {
           setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+          setAuthError(null);
         }
         setLoading(false);
         return;
@@ -196,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       if (identityChanged || event === 'INITIAL_SESSION') {
         const expectedVersion = clearPrivateState(nextUser.id);
+        privateStateLoadingRef.current = true;
         setLoading(true);
         void loadUserData(nextUser, expectedVersion).finally(() => {
           if (
@@ -207,13 +251,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               expectedVersion
             )
           ) {
+            privateStateLoadingRef.current = false;
             setLoading(false);
           }
         });
         return;
       }
 
-      setLoading(false);
+      if (!privateStateLoadingRef.current) {
+        setLoading(false);
+      }
     });
 
     return () => {
@@ -356,27 +403,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
     setUser(null);
     setSession(null);
+    privateStateLoadingRef.current = false;
     clearPrivateState(null);
     setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
-    setAuthError(supabase ? null : SUPABASE_CONFIGURATION_ERROR);
+    setAuthError(null);
+
+    if (!supabase) {
+      setAuthError(SUPABASE_CONFIGURATION_ERROR);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setAuthError('The local session was cleared, but Supabase could not complete sign out.');
+      }
+    } catch {
+      setAuthError('The local session was cleared, but Supabase could not complete sign out.');
+    }
   };
 
-  const updatePlan = (_planId: 'starter' | 'pro' | 'agency') => {
-    console.warn('Direct plan updates require verified billing and are unavailable in M1.');
-  };
+  const reloadWorkspace = async () => {
+    if (!user) return;
 
-  // M1 paid research is disabled. Credit mutations are backend-only in P1-B,
-  // so the browser must not call any credit RPC.
-  const consumeCredits = async (
-    _amount: number,
-    _metadata?: { keyword: string; pages: number; listingsFound: number }
-  ): Promise<boolean> => {
-    return false;
+    const expectedVersion = clearPrivateState(user.id);
+    privateStateLoadingRef.current = true;
+    setAuthError(null);
+    setLoading(true);
+
+    await loadUserData(user, expectedVersion);
+    if (canApplyPrivateStateLoad(
+      activeUserIdRef.current,
+      privateStateVersionRef.current,
+      user.id,
+      expectedVersion
+    )) {
+      privateStateLoadingRef.current = false;
+      setLoading(false);
+    }
   };
 
   const isListingSaved = (productId: string): boolean => {
@@ -386,7 +452,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveListing = async (
     product: EtsyProductItem,
     notes?: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<WorkspaceMutationResult> => {
     if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
       return { success: false, error: 'Sign in with a configured Supabase account to save listings.' };
     }
@@ -403,21 +469,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    const newItem: SavedListingItem = {
-      id: `saved-${Date.now()}`,
-      workspaceId: workspace.id,
-      productId: product.id,
-      identifier: product.identifier,
-      title: product.title,
-      shopName: product.shopName,
-      observedPrice: product.observedPrice,
-      estimatedMonthlyRevenue: product.estimatedMonthlyRevenue,
-      stage: product.stage,
-      competition: product.competition,
-      imageUrl: product.imageUrl,
-      addedAt: 'Just now',
-      notes: notes || ''
-    };
+    const mutationUser = user;
+    const expectedVersion = privateStateVersionRef.current;
 
     const { error } = await supabase.from('saved_listings').insert({
       user_id: user.id,
@@ -445,37 +498,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    setSavedListings((prev) => [newItem, ...prev]);
-    setWorkspace((prev) =>
-      prev ? { ...prev, savedListingsCount: prev.savedListingsCount + 1 } : null
-    );
+    const refreshResult = await fetchAndApplyPrivateState(mutationUser, expectedVersion);
+    if (refreshResult.success) return { success: true };
 
-    return { success: true };
+    const refreshError = 'The listing was saved, but the workspace could not be refreshed. Reload before making more changes.';
+    invalidatePrivateStateAfterRefreshFailure(mutationUser, expectedVersion, refreshError);
+    return { success: false, error: refreshError };
   };
 
-  const removeSavedListing = async (productId: string) => {
-    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) return;
+  const removeSavedListing = async (productId: string): Promise<WorkspaceMutationResult> => {
+    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
+      return { success: false, error: 'Sign in with a configured Supabase account to remove saved listings.' };
+    }
 
-    await supabase
+    const mutationUser = user;
+    const expectedVersion = privateStateVersionRef.current;
+
+    const { error } = await supabase
       .from('saved_listings')
       .delete()
       .eq('user_id', user.id)
       .eq('product_identifier', productId);
 
-    setSavedListings((prev) => prev.filter((item) => item.productId !== productId));
-    setWorkspace((prev) =>
-      prev ? { ...prev, savedListingsCount: Math.max(0, prev.savedListingsCount - 1) } : null
-    );
+    if (error) {
+      return { success: false, error: 'Unable to remove this saved listing right now. Please try again.' };
+    }
+
+    const refreshResult = await fetchAndApplyPrivateState(mutationUser, expectedVersion);
+    if (refreshResult.success) return { success: true };
+
+    const refreshError = 'The listing was removed, but the workspace could not be refreshed. Reload before making more changes.';
+    invalidatePrivateStateAfterRefreshFailure(mutationUser, expectedVersion, refreshError);
+    return { success: false, error: refreshError };
   };
 
-  const clearHistory = async () => {
-    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) return;
+  const clearHistory = async (): Promise<WorkspaceMutationResult> => {
+    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
+      return { success: false, error: 'Sign in with a configured Supabase account to clear research history.' };
+    }
 
-    await supabase
+    const mutationUser = user;
+    const expectedVersion = privateStateVersionRef.current;
+
+    const { error } = await supabase
       .from('research_history')
       .delete()
       .eq('user_id', user.id);
-    setSearchHistory([]);
+
+    if (error) {
+      return { success: false, error: 'Unable to clear research history right now. Please try again.' };
+    }
+
+    const refreshResult = await fetchAndApplyPrivateState(mutationUser, expectedVersion);
+    if (refreshResult.success) return { success: true };
+
+    const refreshError = 'Research history was cleared, but the workspace could not be refreshed. Reload before making more changes.';
+    invalidatePrivateStateAfterRefreshFailure(mutationUser, expectedVersion, refreshError);
+    return { success: false, error: refreshError };
   };
 
   return (
@@ -497,8 +576,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatePassword,
         updateRecoveredPassword,
         signOut,
-        updatePlan,
-        consumeCredits,
+        reloadWorkspace,
         saveListing,
         removeSavedListing,
         isListingSaved,

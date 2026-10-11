@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import {
+  getActiveSubscriptionPlan,
+  getResearchCreditEntitlement,
   getSavedListingInsertErrorMessage,
   getSavedListingLimit,
   getSavedListingQuotaMessage
@@ -64,6 +66,34 @@ test('saved-listing entitlement matches the database active-subscription rules',
   );
 });
 
+test('research credit display is gated by the same active subscription period', () => {
+  const now = Date.parse('2026-10-11T12:00:00Z');
+  const fundedAccount = { credits_remaining: 25, monthly_allowance: 100 };
+
+  assert.equal(getActiveSubscriptionPlan({ plan_tier: 'pro', status: 'active' }, now), 'pro');
+  assert.equal(getActiveSubscriptionPlan({ plan_tier: 'pro', status: 'inactive' }, now), null);
+  assert.deepEqual(
+    getResearchCreditEntitlement({ plan_tier: 'pro', status: 'inactive' }, fundedAccount, now),
+    { creditsRemaining: 0, totalCredits: 0 }
+  );
+  assert.deepEqual(
+    getResearchCreditEntitlement(
+      { plan_tier: 'starter', status: 'active', current_period_end: '2026-10-11T12:00:00Z' },
+      fundedAccount,
+      now
+    ),
+    { creditsRemaining: 0, totalCredits: 0 }
+  );
+  assert.deepEqual(
+    getResearchCreditEntitlement(
+      { plan_tier: 'pro', status: 'active' },
+      { credits_remaining: 120, monthly_allowance: 100 },
+      now
+    ),
+    { creditsRemaining: 100, totalCredits: 100 }
+  );
+});
+
 test('saved-listing quota and uniqueness failures become safe user-facing messages', () => {
   assert.equal(
     getSavedListingQuotaMessage(0, 0),
@@ -88,6 +118,7 @@ test('saved-listing quota and uniqueness failures become safe user-facing messag
 });
 
 test('saved-listing callers surface asynchronous database failures', () => {
+  const authSource = readSource('src/context/AuthContext.tsx');
   const workspaceSource = readSource('src/components/EtsyHunterWorkspace.tsx');
   const detailSource = readSource('src/components/EtsyProductDetailModal.tsx');
   const watchlistSource = readSource('src/components/EtsyHunterWatchlist.tsx');
@@ -98,4 +129,16 @@ test('saved-listing callers surface asynchronous database failures', () => {
   assert.match(detailSource, /role="alert"/);
   assert.match(watchlistSource, /workspace\?\.maxSavedListings \?\? 0/);
   assert.doesNotMatch(watchlistSource, /maxSavedListings \|\| 50/);
+  assert.match(authSource, /const \{ error \} = await supabase[\s\S]*?\.from\('saved_listings'\)[\s\S]*?\.delete\(\)/);
+  assert.match(authSource, /fetchAndApplyPrivateState\(mutationUser, expectedVersion\)/);
+  assert.doesNotMatch(authSource, /id: `saved-\$\{Date\.now\(\)\}`/);
+});
+
+test('research UI cannot invoke providers or save sample keyword metrics into customer state', () => {
+  const modalSource = readSource('src/components/EtsyTagAnalyzerModal.tsx');
+
+  assert.doesNotMatch(modalSource, /consumeCredits/);
+  assert.doesNotMatch(modalSource, /onAddProduct/);
+  assert.match(modalSource, /Research providers are disabled/);
+  assert.match(modalSource, /Demo preview/);
 });

@@ -16,7 +16,6 @@ import { EtsyTagAnalyzerModal } from './components/EtsyTagAnalyzerModal';
 import { EtsyProductDetailModal } from './components/EtsyProductDetailModal';
 import { EtsyProductItem, ResearchStage } from './types/etsyHunter';
 import { DEMO_ETSY_PRODUCTS } from './data/mockEtsyHunterData';
-import { AlertCircle, X } from 'lucide-react';
 import { canAccessPrivateWorkspace } from './security/workspaceAccess';
 import {
   customerPathForPage,
@@ -40,6 +39,7 @@ function AppContent() {
     loading,
     authError,
     isLiveSupabase,
+    reloadWorkspace,
     passwordRecoveryStatus
   } = useAuth();
   const { pathname, navigate } = useBrowserPath();
@@ -75,7 +75,6 @@ function AppContent() {
   const [isTagAnalyzerOpen, setIsTagAnalyzerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<EtsyProductItem | null>(null);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
-  const [creditAlert, setCreditAlert] = useState<string | null>(null);
 
   // Clear all private board state whenever the authenticated identity changes or expires.
   useEffect(() => {
@@ -84,7 +83,6 @@ function AppContent() {
     setIsProductDetailOpen(false);
     setIsTagAnalyzerOpen(false);
     setIsCommandMenuOpen(false);
-    setCreditAlert(null);
   }, [user?.id]);
 
   useEffect(() => {
@@ -128,39 +126,6 @@ function AppContent() {
     );
   };
 
-  // Add new candidate product
-  const handleAddProduct = (productData: Partial<EtsyProductItem>) => {
-    const newIdNum = Math.floor(200 + Math.random() * 800);
-    const newProduct: EtsyProductItem = {
-      id: `prod-${Date.now()}`,
-      identifier: `ETSY-${newIdNum}`,
-      title: productData.title || 'Candidate Listing',
-      shopName: productData.shopName || 'EvaluatedShop',
-      imageUrl:
-        productData.imageUrl ||
-        'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=80',
-      category: productData.category || 'Home & Living',
-      tags: productData.tags || ['personalized gift', 'custom item'],
-      observedPrice: productData.observedPrice || 28.5,
-      observedShopRating: 4.9,
-      observedReviewsCount: 120,
-      observedInCartCount: 8,
-      observedIsBestseller: false,
-      observedIsSponsored: false,
-      estimatedMonthlyRevenue: productData.estimatedMonthlyRevenue || 9120,
-      estimatedMonthlySales: productData.estimatedMonthlySales || 320,
-      estimatedMonthlyViews: 14200,
-      estimatedMarginPct: productData.estimatedMarginPct || 70,
-      opportunityScore: productData.opportunityScore || 85,
-      competition: productData.competition || 'low',
-      stage: productData.stage || 'trending',
-      notes: productData.notes || 'Added from Product Research Explorer.',
-      createdAt: 'Just now'
-    };
-
-    setProducts((prev) => [newProduct, ...prev]);
-  };
-
   // Update existing product
   const handleUpdateProduct = (updated: EtsyProductItem) => {
     setProducts((prev) =>
@@ -193,23 +158,6 @@ function AppContent() {
         selectedProduct={selectedProduct}
       />
 
-      {/* Credit alert banner */}
-      {creditAlert && (
-        <div className="fixed top-3 right-3 z-50 max-w-md p-3 rounded-xl bg-[#121216] border border-[#e5484d] text-xs text-[#f7f8f8] shadow-2xl flex items-start gap-2.5 animate-in slide-in-from-top-2">
-          <AlertCircle className="w-4 h-4 text-[#e5484d] shrink-0 mt-0.5" />
-          <div className="flex-1 leading-relaxed">
-            <span className="font-semibold text-[#e5484d]">Research Credits Exhausted</span>
-            <p className="text-[#8a8f98] mt-0.5">{creditAlert}</p>
-          </div>
-          <button
-            onClick={() => setCreditAlert(null)}
-            className="p-1 text-[#8a8f98] hover:text-white rounded"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {route.scope === 'customer' ? (
         loading ? (
           <RouteLoadingState dashboard />
@@ -218,7 +166,7 @@ function AppContent() {
         ) : !user || !session ? (
           <RouteAccessState kind="unauthorized" message="Sign in with your Etsy Hunter account to open this private workspace." onHome={() => navigate('/')} onLogin={() => { setAuthInitialMode('login'); setIsAuthOpen(true); }} />
         ) : !hasPrivateWorkspaceAccess ? (
-          <RouteAccessState kind="unavailable" message={authError || 'Your private workspace could not be loaded.'} onHome={() => navigate('/')} />
+          <RouteAccessState kind="unavailable" message={authError || 'Your private workspace could not be loaded.'} onHome={() => navigate('/')} onRetry={() => void reloadWorkspace()} />
         ) : route.page === 'not_found' ? (
           <RouteNotFoundState onHome={() => navigate('/')} onWorkspace={() => navigate('/app/board')} />
         ) : (
@@ -329,13 +277,13 @@ function AppContent() {
       <EtsyTagAnalyzerModal
         isOpen={isTagAnalyzerOpen}
         onClose={() => setIsTagAnalyzerOpen(false)}
-        onAddProduct={handleAddProduct}
       />
 
       {/* Etsy Product Detail Modal */}
       <EtsyProductDetailModal
         isOpen={isProductDetailOpen}
         product={selectedProduct}
+        isDemoProduct={selectedProduct ? DEMO_PRODUCT_IDS.has(selectedProduct.id) : false}
         onClose={() => {
           setIsProductDetailOpen(false);
           setSelectedProduct(null);

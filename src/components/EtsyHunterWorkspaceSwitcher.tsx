@@ -33,7 +33,7 @@ export const EtsyHunterWorkspaceSwitcher: React.FC<EtsyHunterWorkspaceSwitcherPr
             <div className="text-[10px] font-mono text-[#8a8f98] uppercase">
               {workspace?.plan && workspace.plan !== 'none'
                 ? `${workspace.plan} Plan`
-                : 'Free Account'}
+                : 'No Subscription'}
             </div>
           </div>
         )}

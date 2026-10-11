@@ -3,7 +3,11 @@ import {
   hasValidSupabaseConfiguration,
   SUPABASE_CONFIGURATION_ERROR
 } from '../security/supabaseConfiguration';
-import { getSavedListingLimit } from '../security/savedListingEntitlements';
+import {
+  getActiveSubscriptionPlan,
+  getResearchCreditEntitlement,
+  getSavedListingLimit
+} from '../security/savedListingEntitlements';
 
 // Retrieve Vite client environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -111,18 +115,20 @@ export async function fetchUserWorkspaceData(user: User): Promise<{
     // 2. Fetch subscription
     const { data: sub, error: subscriptionError } = await client
       .from('subscriptions')
-      .select('*')
+      .select('plan_tier, status, current_period_start, current_period_end')
       .eq('user_id', user.id)
       .maybeSingle();
     if (subscriptionError) throw new Error('Unable to load subscription entitlements.');
+    if (!sub) throw new Error('Workspace subscription data is unavailable. Please sign out and try again.');
 
     // 3. Fetch credit account
     const { data: credits, error: creditError } = await client
       .from('research_credit_accounts')
-      .select('*')
+      .select('credits_remaining, monthly_allowance')
       .eq('user_id', user.id)
       .maybeSingle();
     if (creditError) throw new Error('Unable to load the research credit account.');
+    if (!credits) throw new Error('Workspace credit data is unavailable. Please sign out and try again.');
 
     // 4. Fetch saved listings
     const { data: listings, error: listingsError } = await client
@@ -168,18 +174,20 @@ export async function fetchUserWorkspaceData(user: User): Promise<{
 
     // Authoritative workspace state:
     // User starts with plan_tier 'none' and 0 credits until granted or paid.
+    const activePlan = getActiveSubscriptionPlan(sub);
+    const creditEntitlement = getResearchCreditEntitlement(sub, credits);
     const maxSavedListings = getSavedListingLimit(sub);
     const workspace: WorkspaceData = {
       id: `ws-${user.id}`,
-      name: profileData?.workspace_name || `${user.user_metadata?.full_name || 'Personal'}'s Workspace`,
+      name: profileData.workspace_name || 'Personal Workspace',
       slug: user.id.slice(0, 8),
-      plan: maxSavedListings > 0 ? (sub?.plan_tier as WorkspaceData['plan']) : 'none',
+      plan: activePlan ?? 'none',
       role: 'owner',
-      creditsRemaining: credits?.credits_remaining ?? 0,
-      totalCredits: credits?.monthly_allowance ?? 0,
+      creditsRemaining: creditEntitlement.creditsRemaining,
+      totalCredits: creditEntitlement.totalCredits,
       savedListingsCount: mappedListings.length,
       maxSavedListings,
-      createdAt: profileData?.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+      createdAt: profileData.created_at?.split('T')[0] || ''
     };
 
     return { workspace, savedListings: mappedListings, searchHistory: mappedHistory };

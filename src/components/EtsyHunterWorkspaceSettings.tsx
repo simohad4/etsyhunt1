@@ -7,8 +7,7 @@ import {
   ShieldCheck,
   Bookmark,
   History,
-  Trash2,
-  AlertCircle
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PRICING_PLANS } from '../config/pricing';
@@ -27,15 +26,12 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
   const {
     user,
     workspace,
-    updatePlan,
     searchHistory,
     clearHistory,
-    isLiveSupabase,
     updatePassword
   } = useAuth();
 
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   // Password update form state
   const [newPassword, setNewPassword] = useState('');
@@ -46,22 +42,6 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
 
   const isPaidPlan = workspace.plan !== 'none';
   const currentPlan = workspace.plan !== 'none' ? PRICING_PLANS[workspace.plan as 'starter' | 'pro' | 'agency'] : null;
-
-  const handlePlanUpgrade = (planId: 'starter' | 'pro' | 'agency') => {
-    setErrorMessage(null);
-    if (isLiveSupabase) {
-      setErrorMessage(
-        'Direct self-assignment is disabled in production. Paid subscriptions require verified checkout (scheduled for M2 billing integration).'
-      );
-      setTimeout(() => setErrorMessage(null), 5000);
-      return;
-    }
-
-    // Demo Mode simulation
-    updatePlan(planId);
-    setSaveMessage(`[Demo Mode] Switched to ${PRICING_PLANS[planId].name} plan. Research credits and listing quotas updated.`);
-    setTimeout(() => setSaveMessage(null), 4000);
-  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +59,14 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
       setPasswordStatus('Password successfully updated.');
       setNewPassword('');
       setTimeout(() => setPasswordStatus(null), 4000);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    setHistoryError(null);
+    const result = await clearHistory();
+    if (!result.success) {
+      setHistoryError(result.error || 'Unable to clear research history right now.');
     }
   };
 
@@ -121,24 +109,10 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
         }
       />
 
-      {saveMessage && (
-        <div className="p-3 rounded-xl bg-[#299764]/10 border border-[#299764]/30 text-xs text-[#30a46c] flex items-center gap-2">
-          <Check className="w-4 h-4 shrink-0" />
-          <span>{saveMessage}</span>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="p-3 rounded-xl bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
       {/* Real-time Usage Limits & Quotas */}
       <div className="space-y-4">
         <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-          Active Research Quotas
+          Supabase entitlements
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -168,7 +142,7 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
             </div>
 
             <p className="text-[11px] text-[#575a65]">
-              1 credit = 1 keyword search page (approx. up to 36 listings). Resets monthly upon payment renewal.
+              Balance and allowance are shown only for a currently active subscription. Research providers remain disabled.
             </p>
           </div>
 
@@ -198,27 +172,21 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
             </div>
 
             <p className="text-[11px] text-[#575a65]">
-              Candidate product listings saved to your personal library for analysis and monitoring.
+              Records currently stored in your authenticated Supabase workspace.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Subscription Plans Selection */}
+      {/* Subscription plan reference */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-mono uppercase tracking-wider text-[#575a65]">
-            Subscription Tiers
+            Plan reference
           </h3>
-          {isLiveSupabase ? (
-            <span className="text-[10px] text-[#8a8f98] font-mono">
-              Live Checkout arriving in M2
-            </span>
-          ) : (
-            <span className="text-[10px] text-[#707bfb] font-mono">
-              Demo Simulation Mode
-            </span>
-          )}
+          <span className="text-[10px] text-[#8a8f98] font-mono">
+            Billing unavailable
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -270,10 +238,11 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
                   </div>
                 ) : (
                   <button
-                    onClick={() => handlePlanUpgrade(planKey)}
-                    className="w-full py-2 rounded bg-[#5e6ad2]/20 hover:bg-[#5e6ad2] text-[#707bfb] hover:text-white border border-[#5e6ad2]/40 text-xs font-semibold transition-colors cursor-pointer"
+                    type="button"
+                    disabled
+                    className="w-full cursor-not-allowed rounded border border-[#282835] bg-[#18181f] py-2 text-xs font-semibold text-[#575a65]"
                   >
-                    {isLiveSupabase ? `Upgrade to ${plan.name} (M2)` : `Switch to ${plan.name} (Demo)`}
+                    Billing unavailable
                   </button>
                 )}
               </div>
@@ -334,7 +303,7 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
         icon={<History className="h-4 w-4" />}
         action={searchHistory.length > 0 ? (
             <button
-              onClick={clearHistory}
+              onClick={() => void handleClearHistory()}
               className="text-xs text-[#8a8f98] hover:text-[#e5484d] flex items-center gap-1 cursor-pointer"
             >
               <Trash2 className="w-3 h-3" />
@@ -343,6 +312,11 @@ export const EtsyHunterWorkspaceSettings: React.FC<EtsyHunterWorkspaceSettingsPr
         ) : undefined}
         bodyClassName={searchHistory.length > 0 ? 'p-0' : 'p-4'}
       >
+        {historyError && (
+          <div role="alert" className="border-b border-[#e5484d]/30 bg-[#e5484d]/10 px-4 py-3 text-xs text-[#ff7b80]">
+            {historyError}
+          </div>
+        )}
         {searchHistory.length > 0 ? (
           <div className="divide-y divide-[#22222b]/60 text-xs">
             {searchHistory.slice(0, 10).map((h) => (

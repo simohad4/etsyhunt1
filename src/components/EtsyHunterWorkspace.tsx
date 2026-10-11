@@ -10,8 +10,6 @@ import {
   ArrowLeft,
   Settings,
   Tag,
-  TrendingUp,
-  Percent,
   Layers,
   Menu,
   X
@@ -81,7 +79,10 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   const handleSavedListingToggle = async (product: EtsyProductItem) => {
     setSavedListingError(null);
     if (isListingSaved(product.id)) {
-      await removeSavedListing(product.id);
+      const result = await removeSavedListing(product.id);
+      if (!result.success) {
+        setSavedListingError(result.error || 'Unable to remove this saved listing right now.');
+      }
       return;
     }
 
@@ -123,12 +124,6 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   });
 
   const categories = Array.from(new Set(products.map((p) => p.category)));
-  const averageOpportunity = products.length > 0
-    ? Math.round(products.reduce((total, product) => total + product.opportunityScore, 0) / products.length)
-    : null;
-  const averageMargin = products.length > 0
-    ? Math.round(products.reduce((total, product) => total + product.estimatedMarginPct, 0) / products.length)
-    : null;
   const boardSourceIndicator = boardDataSource === 'demo'
     ? <DashboardStatusIndicator label="Demo data" tone="warning" title="These are sample listings loaded for product exploration." />
     : boardDataSource === 'mixed'
@@ -181,11 +176,11 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
             className={`w-full py-2 px-2.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold flex items-center transition-all shadow-[0_0_14px_rgba(94,106,210,0.3)] cursor-pointer ${
               sidebarCollapsed ? 'justify-center px-0' : 'justify-between'
             }`}
-            title="Start Product Research (1 credit / page)"
+            title="Open the disabled research preview"
           >
             <div className="flex items-center gap-2">
               <Search className="w-4 h-4 shrink-0" />
-              {!sidebarCollapsed && <span>Product Research</span>}
+              {!sidebarCollapsed && <span>Research Preview</span>}
             </div>
             {!sidebarCollapsed && (
               <span className="eh-kbd text-[9px] bg-white/20 border-white/30 text-white">
@@ -329,7 +324,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
               className="px-3 py-1.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_14px_rgba(94,106,210,0.35)] cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Research Query</span>
+              <span className="hidden sm:inline">Research Preview</span>
             </button>
           </div>
         </header>
@@ -337,7 +332,6 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
         {/* Global Status Banner */}
         <EtsyHunterStatusBanner
           onOpenSettings={() => handleTabSelect('settings')}
-          onOpenResearch={onOpenTagAnalyzer}
           onSeedDemoData={onSeedSampleProducts}
           totalListingsCount={products.length}
         />
@@ -369,31 +363,31 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <DashboardStatCard
-                  label="Board listings"
-                  value={products.length}
-                  description="Entries currently loaded in this session"
-                  icon={<Layers className="h-4 w-4" />}
+                  label="Research credits"
+                  value={`${workspace?.creditsRemaining ?? 0} / ${workspace?.totalCredits ?? 0}`}
+                  description="Active-subscription entitlement from Supabase"
+                  icon={<Zap className="h-4 w-4" />}
                   tone="indigo"
                 />
                 <DashboardStatCard
                   label="Saved to workspace"
-                  value={savedListings.length}
-                  description="Supabase-backed saved listing records"
+                  value={`${workspace?.savedListingsCount ?? 0} / ${workspace?.maxSavedListings ?? 0}`}
+                  description="Authoritative saved-listing usage and quota"
                   icon={<Bookmark className="h-4 w-4" />}
                   tone="green"
                 />
                 <DashboardStatCard
-                  label="Avg. opportunity"
-                  value={averageOpportunity === null ? '—' : averageOpportunity}
-                  description="Modeled score across current board entries"
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  tone="indigo"
+                  label="Active plan"
+                  value={workspace?.plan === 'none' ? 'None' : workspace?.plan ?? 'None'}
+                  description="Verified subscription state from Supabase"
+                  icon={<Layers className="h-4 w-4" />}
+                  tone="neutral"
                 />
                 <DashboardStatCard
-                  label="Avg. est. margin"
-                  value={averageMargin === null ? '—' : `${averageMargin}%`}
-                  description="Estimate across current board entries"
-                  icon={<Percent className="h-4 w-4" />}
+                  label="Session board entries"
+                  value={products.length}
+                  description={boardDataSource === 'demo' ? 'Explicitly labeled demo entries' : boardDataSource === 'mixed' ? 'Mixed demo and session entries' : 'Not persisted to Supabase'}
+                  icon={<Columns className="h-4 w-4" />}
                   tone="yellow"
                 />
               </div>
@@ -449,7 +443,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
               {products.length === 0 ? (
                 <DashboardEmptyState
                   title="Your research board is empty"
-                  description="Run your first keyword search to evaluate niche opportunities. You can also load explicitly labeled sample listings to explore the board without treating them as marketplace data."
+                  description="Research providers are disabled, so no live results can populate this board. Load explicitly labeled demo listings to explore the interface without treating them as marketplace data."
                   icon={<Search className="h-6 w-6" />}
                   action={
                     <button
@@ -457,7 +451,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                       className="px-4 py-2 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold shadow-[0_0_16px_rgba(94,106,210,0.35)] cursor-pointer flex items-center gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>Start Research Query</span>
+                      <span>View Research Preview</span>
                     </button>
                   }
                   secondaryAction={onSeedSampleProducts ? (
@@ -558,7 +552,9 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                               {/* Metrics Strip: Observed Price vs Estimated Monthly Revenue */}
                               <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-[#282835]/50 text-[11px]">
                                 <div>
-                                  <span className="text-[10px] text-[#575a65] block">Observed Price</span>
+                                  <span className="text-[10px] text-[#575a65] block">
+                                    {demoProductIds.has(prod.id) ? 'Sample Price' : 'Observed Price'}
+                                  </span>
                                   <span className="font-mono text-[#f7f8f8] font-medium">
                                     ${prod.observedPrice.toFixed(2)}
                                   </span>

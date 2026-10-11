@@ -4,17 +4,10 @@ import {
   Search,
   Copy,
   Check,
-  Plus,
-  TrendingUp,
   Tag,
-  DollarSign,
   AlertCircle,
-  HelpCircle,
-  Sparkles,
-  ArrowRight,
-  ExternalLink
+  ArrowRight
 } from 'lucide-react';
-import { EtsyProductItem, ResearchStage } from '../types/etsyHunter';
 import { DEMO_KEYWORD_DATABASE } from '../data/mockEtsyHunterData';
 import { useAuth } from '../context/AuthContext';
 import { calculateRequiredCredits } from '../config/pricing';
@@ -22,109 +15,37 @@ import { calculateRequiredCredits } from '../config/pricing';
 interface EtsyTagAnalyzerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddProduct: (product: Partial<EtsyProductItem>) => void;
   initialKeyword?: string;
 }
 
 export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
   isOpen,
   onClose,
-  onAddProduct,
   initialKeyword = 'ghost'
 }) => {
-  const { workspace, consumeCredits } = useAuth();
+  const { workspace } = useAuth();
   const [searchTerm, setSearchTerm] = useState(initialKeyword);
   const [pagesToSearch, setPagesToSearch] = useState<number>(1);
-  const [activeKeyword, setActiveKeyword] = useState('ghost');
+  const activeKeyword = 'ghost';
   const [isCopied, setIsCopied] = useState(false);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
-  // Credit Confirmation dialog state
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
-
-  // Form for saving as candidate
-  const [targetCategory, setTargetCategory] = useState('Home & Living');
-  const [customPrice, setCustomPrice] = useState('28.50');
-  const [customMargin, setCustomMargin] = useState('72');
 
   if (!isOpen) return null;
 
   const requiredCredits = calculateRequiredCredits(1, pagesToSearch);
   const currentCredits = workspace?.creditsRemaining ?? 0;
 
-  // Retrieve demo keyword result or compute dynamic fallback
+  // Static sample content for interface preview only. This is never treated as a provider result.
   const result =
     DEMO_KEYWORD_DATABASE[activeKeyword.toLowerCase()] ||
-    DEMO_KEYWORD_DATABASE['ghost'] || {
-      keyword: activeKeyword,
-      estimatedSearchVolume: 24500,
-      competitionLevel: 'low' as const,
-      modeledCompetitionCount: 1820,
-      opportunityScore: 88,
-      estimatedAvgPrice: 26.50,
-      suggestedTags: [
-        activeKeyword,
-        `${activeKeyword} gift`,
-        `handmade ${activeKeyword}`,
-        `custom ${activeKeyword}`,
-        `cute ${activeKeyword}`,
-        `${activeKeyword} decor`,
-        `gift for her`,
-        `personalized gift`
-      ]
-    };
+    DEMO_KEYWORD_DATABASE['ghost'];
 
   const handleInitiateSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
-
-    if (currentCredits < requiredCredits) {
-      setResearchError(`Insufficient research credits (${currentCredits} remaining, ${requiredCredits} required).`);
-      return;
-    }
-
-    setResearchError(null);
-    setShowConfirm(true);
-  };
-
-  const handleConfirmSearch = async () => {
-    if (isSubmitting) return; // Prevent duplicate submission
-    setIsSubmitting(true);
-
-    try {
-      const success = await consumeCredits(requiredCredits, {
-        keyword: searchTerm.trim(),
-        pages: pagesToSearch,
-        listingsFound: Math.min(36 * pagesToSearch, 32 + Math.floor(Math.random() * 8))
-      });
-
-      if (!success) {
-        setResearchError('Paid research is unavailable during M1 security hardening. No credits were consumed.');
-        setShowConfirm(false);
-        setIsSubmitting(false);
-        return;
-      }
-    } catch {
-      setResearchError('Paid research is unavailable during M1 security hardening. No credits were consumed.');
-      setShowConfirm(false);
-      setIsSubmitting(false);
-      return;
-    }
-
-    const term = searchTerm.trim().toLowerCase();
-    const matchedKey = Object.keys(DEMO_KEYWORD_DATABASE).find((k) =>
-      term.includes(k)
-    );
-    if (matchedKey) {
-      setActiveKeyword(matchedKey);
-    } else {
-      setActiveKeyword(searchTerm.trim());
-    }
-
-    setShowConfirm(false);
-    setIsSubmitting(false);
+    setResearchError('Research providers are disabled in this release. No credits were consumed.');
   };
 
   const handleCopyAllTags = () => {
@@ -140,24 +61,6 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
     setTimeout(() => setCopiedTag(null), 1500);
   };
 
-  const handleSaveListingCandidate = () => {
-    onAddProduct({
-      title: `${activeKeyword.charAt(0).toUpperCase() + activeKeyword.slice(1)} Gift Collection`,
-      category: targetCategory,
-      observedPrice: parseFloat(customPrice) || 28.5,
-      estimatedMonthlyRevenue: (parseFloat(customPrice) || 28.5) * 320,
-      estimatedMonthlySales: 320,
-      estimatedMonthlyViews: 14200,
-      estimatedMarginPct: parseInt(customMargin, 10) || 72,
-      tags: result.suggestedTags,
-      competition: result.competitionLevel,
-      opportunityScore: result.opportunityScore,
-      stage: 'trending',
-      notes: `Researched from keyword "${activeKeyword}". Modeled opportunity score: ${result.opportunityScore}.`
-    });
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl rounded-2xl bg-[#121216] border border-[#22222b] shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden max-h-[90vh] flex flex-col">
@@ -170,7 +73,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
                 Product Research &amp; Keyword Explorer
               </h2>
               <span className="text-[10px] text-[#8a8f98] font-mono">
-                1 Credit = 1 Search Page (~36 listings max)
+                Demo preview · research providers disabled
               </span>
             </div>
           </div>
@@ -204,6 +107,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
                 <select
                   value={pagesToSearch}
                   onChange={(e) => setPagesToSearch(parseInt(e.target.value, 10))}
+                  disabled
                   className="bg-transparent text-[#f7f8f8] text-xs focus:outline-none cursor-pointer"
                 >
                   <option value={1} className="bg-[#121216]">1 page (1 credit)</option>
@@ -214,9 +118,10 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
 
               <button
                 type="submit"
-                className="px-4 py-2.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold shadow-[0_0_14px_rgba(94,106,210,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                disabled
+                className="px-4 py-2.5 rounded-lg border border-[#282835] bg-[#18181f] text-[#575a65] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed shrink-0"
               >
-                <span>Execute Search</span>
+                <span>Research unavailable</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -224,65 +129,36 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
             {/* Credit Quota & Requirements Notice */}
             <div className="flex items-center justify-between text-[11px] text-[#8a8f98] pt-1">
               <span>
-                Required: <strong className="text-[#f7f8f8]">{requiredCredits} research credit{requiredCredits > 1 ? 's' : ''}</strong> (1 kw × {pagesToSearch} page{pagesToSearch > 1 ? 's' : ''})
+                Planned cost: <strong className="text-[#f7f8f8]">{requiredCredits} research credit{requiredCredits > 1 ? 's' : ''}</strong>
               </span>
               <span>
-                Available balance: <strong className="text-[#30a46c]">{currentCredits} credit{currentCredits !== 1 ? 's' : ''}</strong>
+                Supabase balance: <strong className="text-[#30a46c]">{currentCredits} credit{currentCredits !== 1 ? 's' : ''}</strong>
               </span>
             </div>
           </form>
 
           {/* Research availability / credit error banner */}
-          {researchError && (
-            <div className="p-3 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center justify-between gap-2">
+          <div role="status" className="p-3 rounded-lg bg-[#f5d90a]/10 border border-[#f5d90a]/30 text-xs text-[#e8d76b] flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{researchError}</span>
+                <span>{researchError || 'Research providers are disabled in this release. No credits were consumed.'}</span>
               </div>
               <span className="text-[11px] text-[#8a8f98]">
-                Paid providers remain disabled in M1.
+                Sample data below is not a live result.
               </span>
-            </div>
-          )}
-
-          {/* Confirmation Dialog Before Consuming Credits */}
-          {showConfirm && (
-            <div className="p-4 rounded-xl bg-[#18181f] border border-[#5e6ad2] text-xs space-y-3 animate-in fade-in duration-100">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-[#f7f8f8]">Confirm Credit Consumption</span>
-                <span className="font-mono text-[#707bfb]">{requiredCredits} credit{requiredCredits > 1 ? 's' : ''}</span>
-              </div>
-              <p className="text-[#8a8f98] leading-relaxed">
-                This search for &ldquo;{searchTerm}&rdquo; will query {pagesToSearch} page{pagesToSearch > 1 ? 's' : ''} of listing results (approx. up to {36 * pagesToSearch} listings) and consume {requiredCredits} research credit from your balance.
-              </p>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleConfirmSearch}
-                  className="px-3.5 py-1.5 rounded-md bg-[#5e6ad2] text-white font-medium hover:bg-[#6875e5] cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Querying...' : 'Confirm & Query'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(false)}
-                  className="px-3 py-1.5 rounded-md bg-[#22222b] text-[#8a8f98] hover:text-white cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Results Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="rounded-lg border border-[#5e6ad2]/30 bg-[#5e6ad2]/10 px-3 py-2 text-[11px] leading-5 text-[#aab1ff]">
+            Demo preview: every value and tag below comes from static sample constants. Nothing was fetched from Etsy, Supabase research history, Gemini, or Apify.
+          </div>
           {/* Metrics Overview Grid (Taxonomy: Estimated vs Modeled) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-[#18181f] border border-[#282835]">
               <span className="text-[#8a8f98] text-[10px] block mb-1">
-                Estimated Volume
+                Sample Est. Volume
               </span>
               <span className="font-mono font-bold text-[#f7f8f8] text-sm">
                 {result.estimatedSearchVolume.toLocaleString()}/mo
@@ -291,7 +167,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
 
             <div className="p-3 rounded-xl bg-[#18181f] border border-[#282835]">
               <span className="text-[#8a8f98] text-[10px] block mb-1">
-                Observed Avg Price
+                Sample Avg Price
               </span>
               <span className="font-mono font-bold text-[#f7f8f8] text-sm">
                 ${result.estimatedAvgPrice.toFixed(2)}
@@ -300,7 +176,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
 
             <div className="p-3 rounded-xl bg-[#18181f] border border-[#282835]">
               <span className="text-[#8a8f98] text-[10px] block mb-1">
-                Modeled Competition
+                Sample Competition
               </span>
               <span className="font-mono font-bold capitalize text-[#30a46c] text-sm">
                 {result.competitionLevel} ({result.modeledCompetitionCount})
@@ -309,7 +185,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
 
             <div className="p-3 rounded-xl bg-[#18181f] border border-[#282835]">
               <span className="text-[#8a8f98] text-[10px] block mb-1">
-                Opportunity Score
+                Sample Opportunity Score
               </span>
               <span className="font-mono font-bold text-[#707bfb] text-sm">
                 {result.opportunityScore} / 100
@@ -360,69 +236,12 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
             </div>
           </div>
 
-          {/* Save as Listing Candidate Form */}
+          {/* Demo results cannot enter authenticated customer state. */}
           <div className="p-4 rounded-xl bg-[#18181f] border border-[#282835] space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#f7f8f8]">
-                Save as Research Candidate Listing
-              </span>
-              <span className="text-[10px] text-[#8a8f98]">
-                Adds to your personal library
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div>
-                <label className="text-[10px] text-[#8a8f98] block mb-1">
-                  Category
-                </label>
-                <select
-                  value={targetCategory}
-                  onChange={(e) => setTargetCategory(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded bg-[#121216] border border-[#282835] text-xs text-[#f7f8f8] focus:outline-none"
-                >
-                  <option value="Home & Living">Home &amp; Living</option>
-                  <option value="Apparel & Sweatshirts">Apparel &amp; Sweatshirts</option>
-                  <option value="Digital Downloads">Digital Downloads</option>
-                  <option value="Jewelry & Accessories">Jewelry &amp; Accessories</option>
-                  <option value="Paper & Party Supplies">Paper &amp; Party Supplies</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#8a8f98] block mb-1">
-                  Target Price ($)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={customPrice}
-                  onChange={(e) => setCustomPrice(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded bg-[#121216] border border-[#282835] text-xs text-[#f7f8f8] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#8a8f98] block mb-1">
-                  Est. Margin (%)
-                </label>
-                <input
-                  type="number"
-                  value={customMargin}
-                  onChange={(e) => setCustomMargin(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded bg-[#121216] border border-[#282835] text-xs text-[#f7f8f8] focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSaveListingCandidate}
-              className="w-full py-2 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Save Candidate to Personal Workspace</span>
-            </button>
+            <span className="font-semibold text-[#f7f8f8]">Demo preview only</span>
+            <p className="text-[#8a8f98] leading-5">
+              Sample keyword values cannot be added to the customer research board or persisted as Supabase saved listings.
+            </p>
           </div>
         </div>
       </div>

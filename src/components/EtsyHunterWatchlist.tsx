@@ -26,6 +26,7 @@ interface EtsyHunterWatchlistProps {
 export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpenTagAnalyzer }) => {
   const { workspace, savedListings, removeSavedListing } = useAuth();
   const [filterQuery, setFilterQuery] = useState('');
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const normalizedQuery = filterQuery.trim().toLowerCase();
   const filteredSaved = savedListings.filter((item) => {
@@ -49,7 +50,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
       'Identifier',
       'Title',
       'Shop',
-      'Observed Price',
+      'Stored Price',
       'Est Monthly Revenue',
       'Competition Rating',
       'Added At'
@@ -72,6 +73,14 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleRemoveSavedListing = async (productId: string) => {
+    setMutationError(null);
+    const result = await removeSavedListing(productId);
+    if (!result.success) {
+      setMutationError(result.error || 'Unable to remove this saved listing right now.');
+    }
   };
 
   type SavedListing = (typeof savedListings)[number];
@@ -104,7 +113,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
     },
     {
       key: 'price',
-      header: 'Observed price',
+      header: 'Stored price',
       className: 'font-mono text-[#f7f8f8]',
       render: (item) => `$${item.observedPrice.toFixed(2)}`
     },
@@ -133,7 +142,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
       render: (item) => (
         <button
           type="button"
-          onClick={() => void removeSavedListing(item.productId)}
+          onClick={() => void handleRemoveSavedListing(item.productId)}
           className="rounded-lg p-2 text-[#575a65] transition-colors hover:bg-[#e5484d]/10 hover:text-[#e5484d]"
           title="Remove from saved listings"
           aria-label={`Remove ${item.title} from saved listings`}
@@ -169,7 +178,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#5e6ad2] px-3 text-xs font-semibold text-white shadow-[0_0_14px_rgba(94,106,210,0.3)] transition-colors hover:bg-[#6875e5]"
             >
               <Plus className="h-3.5 w-3.5" />
-              Explore listings
+              Research preview
             </button>
           </>
         }
@@ -206,6 +215,12 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
         />
       </div>
 
+      {mutationError && (
+        <div role="alert" className="rounded-xl border border-[#e5484d]/30 bg-[#e5484d]/10 px-4 py-3 text-xs text-[#ff7b80]">
+          {mutationError}
+        </div>
+      )}
+
       {savedListings.length > 0 && (
         <DashboardFilterBar
           value={filterQuery}
@@ -241,7 +256,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
       ) : (
         <DashboardEmptyState
           title="No saved listings yet"
-          description="Save a candidate from the research board to add a real record to your personal Supabase workspace."
+          description="Verified saved records will appear here when an enabled research source provides a listing you choose to save."
           icon={<Bookmark className="h-6 w-6" />}
           action={
             <button
@@ -250,7 +265,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#5e6ad2] px-4 py-2 text-xs font-semibold text-white shadow-[0_0_16px_rgba(94,106,210,0.3)] transition-colors hover:bg-[#6875e5]"
             >
               <Plus className="h-3.5 w-3.5" />
-              Start product research
+              View research preview
             </button>
           }
         />

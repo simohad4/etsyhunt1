@@ -11,17 +11,24 @@ const PLAN_LIMITS: Record<string, number> = {
   agency: 1000
 };
 
+export type ActiveSubscriptionPlan = 'starter' | 'pro' | 'agency';
+
+export interface ResearchCreditAccount {
+  credits_remaining?: number | null;
+  monthly_allowance?: number | null;
+}
+
 function isValidPeriodBoundary(value: string | null | undefined): boolean {
   return value == null || Number.isFinite(Date.parse(value));
 }
 
-export function getSavedListingLimit(
+export function getActiveSubscriptionPlan(
   subscription: SavedListingSubscription | null | undefined,
   now = Date.now()
-): number {
-  if (!subscription || subscription.status !== 'active') return 0;
-  if (!isValidPeriodBoundary(subscription.current_period_start)) return 0;
-  if (!isValidPeriodBoundary(subscription.current_period_end)) return 0;
+): ActiveSubscriptionPlan | null {
+  if (!subscription || subscription.status !== 'active') return null;
+  if (!isValidPeriodBoundary(subscription.current_period_start)) return null;
+  if (!isValidPeriodBoundary(subscription.current_period_end)) return null;
 
   const periodStart = subscription.current_period_start
     ? Date.parse(subscription.current_period_start)
@@ -30,10 +37,43 @@ export function getSavedListingLimit(
     ? Date.parse(subscription.current_period_end)
     : null;
 
-  if (periodStart !== null && periodStart > now) return 0;
-  if (periodEnd !== null && periodEnd <= now) return 0;
+  if (periodStart !== null && periodStart > now) return null;
+  if (periodEnd !== null && periodEnd <= now) return null;
 
-  return PLAN_LIMITS[subscription.plan_tier ?? ''] ?? 0;
+  return subscription.plan_tier === 'starter' ||
+    subscription.plan_tier === 'pro' ||
+    subscription.plan_tier === 'agency'
+    ? subscription.plan_tier
+    : null;
+}
+
+export function getSavedListingLimit(
+  subscription: SavedListingSubscription | null | undefined,
+  now = Date.now()
+): number {
+  const plan = getActiveSubscriptionPlan(subscription, now);
+  return plan ? PLAN_LIMITS[plan] : 0;
+}
+
+function authoritativeNonNegativeInteger(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+export function getResearchCreditEntitlement(
+  subscription: SavedListingSubscription | null | undefined,
+  creditAccount: ResearchCreditAccount | null | undefined,
+  now = Date.now()
+): { creditsRemaining: number; totalCredits: number } {
+  if (!getActiveSubscriptionPlan(subscription, now) || !creditAccount) {
+    return { creditsRemaining: 0, totalCredits: 0 };
+  }
+
+  const totalCredits = authoritativeNonNegativeInteger(creditAccount.monthly_allowance);
+  const creditsRemaining = Math.min(
+    authoritativeNonNegativeInteger(creditAccount.credits_remaining),
+    totalCredits
+  );
+  return { creditsRemaining, totalCredits };
 }
 
 export function getSavedListingQuotaMessage(currentCount: number, limit: number): string {

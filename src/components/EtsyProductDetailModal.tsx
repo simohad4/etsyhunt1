@@ -23,6 +23,7 @@ interface EtsyProductDetailModalProps {
   onClose: () => void;
   onUpdateProduct?: (updated: EtsyProductItem) => void;
   onDeleteProduct?: (id: string) => void;
+  isDemoProduct?: boolean;
 }
 
 export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
@@ -30,7 +31,8 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
   product,
   onClose,
   onUpdateProduct,
-  onDeleteProduct
+  onDeleteProduct,
+  isDemoProduct = false
 }) => {
   const { isListingSaved, saveListing, removeSavedListing } = useAuth();
   const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
@@ -60,8 +62,15 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
   const handleToggleSaved = async () => {
     setSavedListingError(null);
     if (isSaved) {
-      await removeSavedListing(product.id);
+      const result = await removeSavedListing(product.id);
+      if (!result.success) {
+        setSavedListingError(result.error || 'Unable to remove this saved listing right now.');
+      }
     } else {
+      if (isDemoProduct) {
+        setSavedListingError('Demo listings cannot be saved to your Supabase workspace.');
+        return;
+      }
       const result = await saveListing(product);
       if (!result.success) {
         setSavedListingError(result.error || 'Unable to save this listing right now.');
@@ -85,14 +94,17 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggleSaved}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
                 isSaved
                   ? 'bg-[#5e6ad2] text-white'
+                  : isDemoProduct
+                  ? 'cursor-not-allowed bg-[#18181f] text-[#575a65] border border-[#282835]'
                   : 'bg-[#18181f] text-[#8a8f98] hover:text-white border border-[#282835]'
               }`}
+              aria-disabled={!isSaved && isDemoProduct}
             >
               <Bookmark className="w-3.5 h-3.5" />
-              <span>{isSaved ? 'Saved in Workspace' : 'Save Listing'}</span>
+              <span>{isSaved ? 'Saved in Workspace' : isDemoProduct ? 'Demo listing' : 'Save Listing'}</span>
             </button>
 
             <button
@@ -156,10 +168,10 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono uppercase tracking-wider text-[#707bfb] font-semibold">
-                1. Observed Marketplace Signals
+                {isDemoProduct ? '1. Sample Listing Values' : '1. Observed Marketplace Signals'}
               </h3>
               <span className="text-[10px] text-[#575a65]">
-                Directly observed where available
+                {isDemoProduct ? 'Demo constants; not observed from Etsy' : 'Directly observed where available'}
               </span>
             </div>
 
