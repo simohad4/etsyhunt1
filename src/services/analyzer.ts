@@ -1,5 +1,12 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
+export const M1_PAID_PROVIDER_CALLS_ENABLED = false;
+
+export interface LiveScrapingOptions {
+  enabled?: boolean;
+  token?: string;
+}
+
 export interface EtsyListingItem {
   id: string;
   title: string;
@@ -72,14 +79,21 @@ export interface MarketAnalysisResult {
  */
 export async function fetchApifyListings(
   keyword: string,
-  providedToken?: string
+  options: LiveScrapingOptions = {}
 ): Promise<{ listings: EtsyListingItem[]; isLive: boolean; error?: string }> {
-  const token = providedToken || process.env.APIFY_TOKEN;
+  const token = options.token;
 
-  if (!token || token.trim() === '' || token === 'MY_APIFY_TOKEN') {
+  if (
+    !M1_PAID_PROVIDER_CALLS_ENABLED ||
+    options.enabled !== true ||
+    !token ||
+    token.trim() === '' ||
+    token === 'MY_APIFY_TOKEN'
+  ) {
     return {
       listings: generateFallbackListings(keyword),
-      isLive: false
+      isLive: false,
+      error: 'Live scraping is unavailable during M1 security hardening.'
     };
   }
 
@@ -192,6 +206,10 @@ export async function analyzeEtsyMarket(
   isLiveScraped: boolean,
   errorNotice?: string
 ): Promise<MarketAnalysisResult> {
+  if (!M1_PAID_PROVIDER_CALLS_ENABLED) {
+    throw new Error('Paid AI analysis is unavailable during M1 security hardening.');
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {

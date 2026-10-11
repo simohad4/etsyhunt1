@@ -87,7 +87,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({
               Saved Listings
             </h2>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#18181f] text-[#707bfb] border border-[#282835]">
-              {savedListings.length} / {workspace?.maxSavedListings || 50}
+              {savedListings.length} / {workspace?.maxSavedListings ?? 0}
             </span>
           </div>
           <p className="text-xs text-[#8a8f98]">

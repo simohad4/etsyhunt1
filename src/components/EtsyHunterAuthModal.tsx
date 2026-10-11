@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, AlertCircle, ArrowRight, Check, Mail, Key } from 'lucide-react';
 import { EtsyHunterLogo } from './EtsyHunterLogo';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,16 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
   initialMode = 'signup',
   onSuccess
 }) => {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, updatePassword } = useAuth();
+  const {
+    signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    resetPassword,
+    updateRecoveredPassword,
+    isLiveSupabase,
+    authError,
+    passwordRecoveryStatus
+  } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot_password' | 'update_password'>(initialMode);
   const [email, setEmail] = useState('');
@@ -27,6 +36,16 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const displayedError = errorMsg || authError;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setMode(
+      initialMode === 'update_password' && passwordRecoveryStatus !== 'ready'
+        ? 'login'
+        : initialMode
+    );
+  }, [initialMode, isOpen, passwordRecoveryStatus]);
 
   if (!isOpen) return null;
 
@@ -69,7 +88,13 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
         setLoading(false);
         return;
       } else if (mode === 'update_password') {
-        const { error } = await updatePassword(newPassword);
+        if (passwordRecoveryStatus !== 'ready') {
+          setErrorMsg('Password recovery authorization is missing or has expired.');
+          setLoading(false);
+          return;
+        }
+
+        const { error } = await updateRecoveredPassword(newPassword);
         if (error) {
           setErrorMsg(error.message);
           setLoading(false);
@@ -147,10 +172,10 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
           </div>
 
           {/* Feedback Banners */}
-          {errorMsg && (
+          {displayedError && (
             <div className="p-2.5 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMsg}</span>
+              <span>{displayedError}</span>
             </div>
           )}
 
@@ -225,7 +250,7 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
                   <button
                     type="button"
                     onClick={handleGoogleAuth}
-                    disabled={loading}
+                    disabled={loading || !isLiveSupabase}
                     className="w-full py-2.5 px-3 rounded-lg bg-[#18181f] hover:bg-[#202029] border border-[#282835] text-xs font-medium text-[#f7f8f8] flex items-center justify-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -324,7 +349,7 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
                   </div>
                 )}
 
-                {mode === 'update_password' && (
+                {mode === 'update_password' && passwordRecoveryStatus === 'ready' && (
                   <div>
                     <label className="block text-[11px] font-medium text-[#8a8f98] mb-1">
                       New Password
@@ -343,7 +368,11 @@ export const EtsyHunterAuthModal: React.FC<EtsyHunterAuthModalProps> = ({
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={
+                    loading ||
+                    !isLiveSupabase ||
+                    (mode === 'update_password' && passwordRecoveryStatus !== 'ready')
+                  }
                   className="w-full mt-2 py-2.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold shadow-[0_0_16px_rgba(94,106,210,0.4)] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   {loading ? (

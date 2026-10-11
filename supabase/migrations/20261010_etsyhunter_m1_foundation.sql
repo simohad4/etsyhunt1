@@ -11,8 +11,8 @@
 --   7. research_cache
 -- ==============================================================================
 
--- 1. Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- UUID defaults use PostgreSQL's built-in pg_catalog.gen_random_uuid().
+-- No extension-owned UUID function is required.
 
 -- ==============================================================================
 -- Table 1: user_profiles
@@ -52,7 +52,7 @@ CREATE POLICY "Users can insert own profile"
 -- Only service role / webhook RPCs can update paid status.
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     plan_tier TEXT NOT NULL DEFAULT 'none' CHECK (plan_tier IN ('none', 'starter', 'pro', 'agency')),
     status TEXT NOT NULL DEFAULT 'inactive' CHECK (status IN ('inactive', 'active', 'past_due', 'canceled')),
@@ -79,7 +79,7 @@ CREATE POLICY "Users can view own subscription"
 -- New users start with 0 credits until granted or paid.
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.research_credit_accounts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     credits_remaining INTEGER NOT NULL DEFAULT 0 CHECK (credits_remaining >= 0),
     monthly_allowance INTEGER NOT NULL DEFAULT 0 CHECK (monthly_allowance >= 0),
@@ -102,7 +102,7 @@ CREATE POLICY "Users can view own credit account"
 -- Audit log of all credit grants, renewals, and deductions
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.research_credit_ledger (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     amount INTEGER NOT NULL, -- negative for deductions, positive for grants
     balance_after INTEGER NOT NULL,
@@ -123,7 +123,7 @@ CREATE POLICY "Users can view own credit ledger history"
 -- User's saved product listings in their personal library
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.saved_listings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     product_identifier TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -154,7 +154,7 @@ CREATE POLICY "Users can manage own saved listings"
 -- Record of previous research keyword executions and credit usage
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.research_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     keyword TEXT NOT NULL,
     pages_requested INTEGER NOT NULL DEFAULT 1 CHECK (pages_requested >= 1 AND pages_requested <= 3),
@@ -185,7 +185,7 @@ CREATE POLICY "Users can insert own research history"
 -- Server-side research cache to avoid duplicate expensive API / scraping queries
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.research_cache (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
     cache_key TEXT NOT NULL UNIQUE,
     keyword TEXT NOT NULL,
     data_payload JSONB NOT NULL,

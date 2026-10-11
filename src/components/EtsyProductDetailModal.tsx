@@ -35,6 +35,11 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
   const { isListingSaved, saveListing, removeSavedListing } = useAuth();
   const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
   const [copiedAll, setCopiedAll] = React.useState(false);
+  const [savedListingError, setSavedListingError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setSavedListingError(null);
+  }, [isOpen, product?.id]);
 
   if (!isOpen || !product) return null;
 
@@ -52,11 +57,15 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
     setTimeout(() => setCopiedTag(null), 1500);
   };
 
-  const handleToggleSaved = () => {
+  const handleToggleSaved = async () => {
+    setSavedListingError(null);
     if (isSaved) {
-      removeSavedListing(product.id);
+      await removeSavedListing(product.id);
     } else {
-      saveListing(product);
+      const result = await saveListing(product);
+      if (!result.success) {
+        setSavedListingError(result.error || 'Unable to save this listing right now.');
+      }
     }
   };
 
@@ -94,6 +103,12 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
             </button>
           </div>
         </div>
+
+        {savedListingError && (
+          <div role="alert" className="px-6 py-2.5 bg-[#e5484d]/10 border-b border-[#e5484d]/30 text-xs text-[#e5484d]">
+            {savedListingError}
+          </div>
+        )}
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">

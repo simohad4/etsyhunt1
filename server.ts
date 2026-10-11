@@ -1,8 +1,19 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { fetchApifyListings, analyzeEtsyMarket } from './src/services/analyzer';
+import {
+  ANALYSIS_UNAVAILABLE_MESSAGE,
+  AccessTokenVerifier,
+  createSupabaseAccessTokenVerifier,
+  extractBearerToken
+} from './src/server/m1Security';
+import {
+  AdminAuthorizationStore,
+  createSupabaseAdminAuthorizationStore,
+  registerAdminRoutes
+} from './src/server/adminRbac';
 
 dotenv.config();
 
@@ -47,11 +58,18 @@ function resolveHost(): string {
   return '0.0.0.0';
 }
 
-async function startServer() {
+interface CreateApiAppOptions {
+  verifyAccessToken?: AccessTokenVerifier;
+  adminStore?: AdminAuthorizationStore | null;
+}
+
+export function createApiApp(options: CreateApiAppOptions = {}) {
   const app = express();
-  const port = resolvePort();
-  const host = resolveHost();
-  const isProduction = process.env.NODE_ENV === 'production';
+  const verifyAccessToken = options.verifyAccessToken ?? createSupabaseAccessTokenVerifier();
+  const adminStore =
+    options.adminStore === undefined
+      ? createSupabaseAdminAuthorizationStore()
+      : options.adminStore;
 
   app.use(express.json({ limit: '10mb' }));
 
@@ -65,60 +83,31 @@ async function startServer() {
     });
   });
 
-  // Main analyze endpoint with safety guardrails
+  registerAdminRoutes(app, { verifyAccessToken, adminStore });
+
+  // M1: Authenticate the caller, then fail closed before any paid provider or credit operation.
   app.post('/api/analyze-etsy', async (req, res) => {
-    try {
-      const { keyword, pages = 1 } = req.body || {};
-
-      // Input validation
-      if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
-        return res.status(400).json({ error: 'Keyword is required and cannot be empty.' });
-      }
-
-      if (keyword.trim().length > 100) {
-        return res.status(400).json({ error: 'Keyword must not exceed 100 characters.' });
-      }
-
-      const cleanKeyword = keyword.trim();
-      const pageCount = Math.max(1, Math.min(3, typeof pages === 'number' ? pages : 1));
-
-      // M1 Security Guardrail:
-      // Live paid scraping is disabled for unauthenticated / unauthorized requests until M2/M3
-      // Check for user-supplied Apify token or explicit server environment override
-      const allowLiveScraping = process.env.ENABLE_LIVE_SCRAPING === 'true';
-      const effectiveToken = allowLiveScraping ? process.env.APIFY_TOKEN : undefined;
-
-      // 1. Fetch listings (with fallback engine active for demo/safety)
-      const { listings, isLive, error: scrapeNotice } = await fetchApifyListings(
-        cleanKeyword,
-        effectiveToken
-      );
-
-      if (!listings || listings.length === 0) {
-        return res.status(404).json({ error: 'No listings found for this keyword.' });
-      }
-
-      // Limit results according to requested pages (approx. 36 per page max)
-      const maxResults = pageCount * 36;
-      const boundedListings = listings.slice(0, maxResults);
-
-      // 2. Run Market Analysis
-      const analysis = await analyzeEtsyMarket(
-        cleanKeyword,
-        boundedListings,
-        isLive,
-        scrapeNotice
-      );
-
-      return res.json(analysis);
-    } catch (err: any) {
-      console.error('[Etsy Hunter Server Error]:', err);
-      const isConfigError = err.message?.includes('GEMINI_API_KEY');
-      return res.status(isConfigError ? 500 : 502).json({
-        error: err.message || 'Failed to complete market analysis.'
-      });
+    const accessToken = extractBearerToken(req.get('authorization'));
+    if (!accessToken) {
+      return res.status(401).json({ error: 'Authentication required.' });
     }
+
+    const verifiedUser = await verifyAccessToken(accessToken).catch(() => null);
+    if (!verifiedUser) {
+      return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+    }
+
+    return res.status(503).json({ error: ANALYSIS_UNAVAILABLE_MESSAGE });
   });
+
+  return app;
+}
+
+export async function startServer() {
+  const app = createApiApp();
+  const port = resolvePort();
+  const host = resolveHost();
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // Mount Vite or static server
   if (!isProduction) {
@@ -150,7 +139,13 @@ async function startServer() {
   process.on('SIGTERM', shutdown);
 }
 
-startServer().catch((err) => {
-  console.error('Fatal server boot error:', err);
-  process.exit(1);
-});
+const isDirectRun = Boolean(
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+);
+
+if (isDirectRun) {
+  startServer().catch((err) => {
+    console.error('Fatal server boot error:', err);
+    process.exit(1);
+  });
+}

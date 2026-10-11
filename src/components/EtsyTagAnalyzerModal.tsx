@@ -42,7 +42,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
   // Credit Confirmation dialog state
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
 
   // Form for saving as candidate
   const [targetCategory, setTargetCategory] = useState('Home & Living');
@@ -81,11 +81,11 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
     if (!searchTerm.trim()) return;
 
     if (currentCredits < requiredCredits) {
-      setInsufficientCredits(true);
+      setResearchError(`Insufficient research credits (${currentCredits} remaining, ${requiredCredits} required).`);
       return;
     }
 
-    setInsufficientCredits(false);
+    setResearchError(null);
     setShowConfirm(true);
   };
 
@@ -101,13 +101,13 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
       });
 
       if (!success) {
-        setInsufficientCredits(true);
+        setResearchError('Paid research is unavailable during M1 security hardening. No credits were consumed.');
         setShowConfirm(false);
         setIsSubmitting(false);
         return;
       }
     } catch {
-      setInsufficientCredits(true);
+      setResearchError('Paid research is unavailable during M1 security hardening. No credits were consumed.');
       setShowConfirm(false);
       setIsSubmitting(false);
       return;
@@ -232,15 +232,15 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
             </div>
           </form>
 
-          {/* Insufficient Credits Banner */}
-          {insufficientCredits && (
+          {/* Research availability / credit error banner */}
+          {researchError && (
             <div className="p-3 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Insufficient research credits ({currentCredits} remaining, {requiredCredits} required).</span>
+                <span>{researchError}</span>
               </div>
               <span className="text-[11px] text-[#8a8f98]">
-                Select fewer pages or update your subscription plan.
+                Paid providers remain disabled in M1.
               </span>
             </div>
           )}

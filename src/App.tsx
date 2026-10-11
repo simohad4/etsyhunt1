@@ -17,9 +17,15 @@ import { EtsyProductDetailModal } from './components/EtsyProductDetailModal';
 import { EtsyProductItem, ResearchStage } from './types/etsyHunter';
 import { DEMO_ETSY_PRODUCTS } from './data/mockEtsyHunterData';
 import { AlertCircle, X } from 'lucide-react';
+import { canAccessPrivateWorkspace } from './security/workspaceAccess';
 
 function AppContent() {
-  const { user, workspace } = useAuth();
+  const { user, workspace, isLiveSupabase, passwordRecoveryStatus } = useAuth();
+  const hasPrivateWorkspaceAccess = canAccessPrivateWorkspace({
+    isSupabaseConfigured: isLiveSupabase,
+    user,
+    workspace
+  });
 
   // Navigation mode: 'landing' | 'workspace'
   const [viewMode, setViewMode] = useState<'landing' | 'workspace'>('landing');
@@ -27,31 +33,40 @@ function AppContent() {
   // Active workspace tab
   const [workspaceTab, setWorkspaceTab] = useState<'board' | 'watchlist' | 'settings'>('board');
 
-  // Products state: initialized empty for fresh user experience, with option to seed demo items
-  const [products, setProducts] = useState<EtsyProductItem[]>(() => {
-    const saved = localStorage.getItem('etsyhunter_products');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {}
-    }
-    return []; // Expected initial state for new users is 0
-  });
+  // Authenticated product-board state is session-only and never shared with the public demo.
+  const [products, setProducts] = useState<EtsyProductItem[]>([]);
 
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup' | 'forgot_password'>('signup');
+  const [authInitialMode, setAuthInitialMode] = useState<
+    'login' | 'signup' | 'forgot_password' | 'update_password'
+  >('signup');
   const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
   const [isTagAnalyzerOpen, setIsTagAnalyzerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<EtsyProductItem | null>(null);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   const [creditAlert, setCreditAlert] = useState<string | null>(null);
 
-  // Sync products to localStorage
+  // Clear all private board state whenever the authenticated identity changes or expires.
   useEffect(() => {
-    localStorage.setItem('etsyhunter_products', JSON.stringify(products));
-  }, [products]);
+    setProducts([]);
+    setSelectedProduct(null);
+    setIsProductDetailOpen(false);
+    setIsTagAnalyzerOpen(false);
+    setIsCommandMenuOpen(false);
+    setCreditAlert(null);
+    if (!user) setViewMode('landing');
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (passwordRecoveryStatus === 'ready') {
+      setAuthInitialMode('update_password');
+      setIsAuthOpen(true);
+    } else if (passwordRecoveryStatus === 'invalid') {
+      setAuthInitialMode('login');
+      setIsAuthOpen(true);
+    }
+  }, [passwordRecoveryStatus]);
 
   // Global Keyboard listener for Cmd+K and Escape
   useEffect(() => {
@@ -165,7 +180,7 @@ function AppContent() {
         </div>
       )}
 
-      {viewMode === 'workspace' ? (
+      {viewMode === 'workspace' && hasPrivateWorkspaceAccess ? (
         /* Authenticated Personal Workspace */
         <EtsyHunterWorkspace
           onBackToLanding={() => setViewMode('landing')}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import {
   supabase,
@@ -9,7 +9,25 @@ import {
   updateUserPassword
 } from '../services/supabase';
 import { EtsyProductItem, ResearchSearchHistoryItem } from '../types/etsyHunter';
-import { PRICING_PLANS } from '../config/pricing';
+import { SUPABASE_CONFIGURATION_ERROR } from '../security/supabaseConfiguration';
+import {
+  canApplyPrivateStateLoad,
+  createAuthoritativeUserPrivateState,
+  createEmptyUserPrivateState,
+  didAuthenticatedUserChange
+} from '../security/privateWorkspaceState';
+import {
+  EMPTY_PASSWORD_RECOVERY_STATE,
+  inspectPasswordRecoveryRedirect,
+  PasswordRecoveryState,
+  PasswordRecoveryStatus,
+  passwordRecoveryStateFromAuthEvent,
+  updateRecoveredPasswordWithSupabase
+} from '../security/passwordRecovery';
+import {
+  getSavedListingInsertErrorMessage,
+  getSavedListingQuotaMessage
+} from '../security/savedListingEntitlements';
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +38,7 @@ interface AuthContextType {
   savedListings: SavedListingItem[];
   searchHistory: ResearchSearchHistoryItem[];
   authError: string | null;
+  passwordRecoveryStatus: PasswordRecoveryStatus;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (
@@ -29,6 +48,7 @@ interface AuthContextType {
   ) => Promise<{ data: any; error: Error | null; needsEmailVerification?: boolean }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
+  updateRecoveredPassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updatePlan: (plan: 'starter' | 'pro' | 'agency') => void;
   consumeCredits: (amount: number, metadata?: { keyword: string; pages: number; listingsFound: number }) => Promise<boolean>;
@@ -40,68 +60,68 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const configurationError = () => new Error(SUPABASE_CONFIGURATION_ERROR);
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [passwordRecoveryState, setPasswordRecoveryState] = useState<PasswordRecoveryState>(
+    EMPTY_PASSWORD_RECOVERY_STATE
+  );
+  const activeUserIdRef = useRef<string | null>(null);
+  const privateStateVersionRef = useRef(0);
 
-  // Single Personal Workspace (1 user = 1 personal workspace)
-  const [workspace, setWorkspace] = useState<WorkspaceData | null>(() => {
-    try {
-      const saved = localStorage.getItem('etsyhunter_personal_workspace');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Supabase is authoritative for all private workspace data.
+  const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
+  const [savedListings, setSavedListings] = useState<SavedListingItem[]>([]);
+  const [searchHistory, setSearchHistory] = useState<ResearchSearchHistoryItem[]>([]);
 
-  // Saved Listings state (zero for new users)
-  const [savedListings, setSavedListings] = useState<SavedListingItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('etsyhunter_saved_listings');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const clearPrivateState = (ownerUserId: string | null): number => {
+    const emptyState = createEmptyUserPrivateState<
+      WorkspaceData,
+      SavedListingItem,
+      ResearchSearchHistoryItem
+    >(ownerUserId);
+    activeUserIdRef.current = emptyState.ownerUserId;
+    privateStateVersionRef.current += 1;
+    setWorkspace(emptyState.workspace);
+    setSavedListings(emptyState.savedListings);
+    setSearchHistory(emptyState.searchHistory);
+    return privateStateVersionRef.current;
+  };
 
-  // Research History state (zero for new users)
-  const [searchHistory, setSearchHistory] = useState<ResearchSearchHistoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('etsyhunter_search_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Sync to local storage
-  useEffect(() => {
-    if (workspace) {
-      localStorage.setItem('etsyhunter_personal_workspace', JSON.stringify(workspace));
-    } else {
-      localStorage.removeItem('etsyhunter_personal_workspace');
-    }
-  }, [workspace]);
-
-  useEffect(() => {
-    localStorage.setItem('etsyhunter_saved_listings', JSON.stringify(savedListings));
-  }, [savedListings]);
-
-  useEffect(() => {
-    localStorage.setItem('etsyhunter_search_history', JSON.stringify(searchHistory));
-  }, [searchHistory]);
-
-  const loadUserData = async (currentUser: User) => {
+  const loadUserData = async (currentUser: User, expectedVersion: number) => {
     try {
       const { workspace: ws, savedListings: listings, searchHistory: history } = await fetchUserWorkspaceData(currentUser);
-      setWorkspace(ws);
-      setSavedListings(listings);
-      if (history && history.length > 0) {
-        setSearchHistory(history);
+      if (!canApplyPrivateStateLoad(
+        activeUserIdRef.current,
+        privateStateVersionRef.current,
+        currentUser.id,
+        expectedVersion
+      )) {
+        return;
       }
+
+      const authoritativeState = createAuthoritativeUserPrivateState(
+        currentUser.id,
+        ws,
+        listings,
+        history
+      );
+      setWorkspace(authoritativeState.workspace);
+      setSavedListings(authoritativeState.savedListings);
+      setSearchHistory(authoritativeState.searchHistory);
     } catch (err: any) {
+      if (!canApplyPrivateStateLoad(
+        activeUserIdRef.current,
+        privateStateVersionRef.current,
+        currentUser.id,
+        expectedVersion
+      )) {
+        return;
+      }
       console.error('Failed to load user workspace data:', err);
       setAuthError(err.message || 'Failed to initialize workspace data.');
     }
@@ -110,41 +130,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle Supabase Auth state changes
   useEffect(() => {
     let mounted = true;
+    const recoveryRedirect =
+      typeof window === 'undefined'
+        ? { hasRecoveryIntent: false, error: null }
+        : inspectPasswordRecoveryRedirect(window.location.search, window.location.hash);
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    if (recoveryRedirect.error) {
+      setPasswordRecoveryState({
+        status: 'invalid',
+        recoveryUserId: null,
+        error: recoveryRedirect.error
+      });
+      setAuthError(recoveryRedirect.error);
+    }
+
+    if (!supabase) {
+      setUser(null);
+      setSession(null);
+      clearPrivateState(null);
+      setAuthError(SUPABASE_CONFIGURATION_ERROR);
+      setLoading(false);
+      return;
+    }
+
+    const client = supabase;
+
+    const {
+      data: { subscription }
+    } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
-      if (error) {
-        setAuthError(error.message);
+
+      const nextUser = nextSession?.user ?? null;
+      const nextUserId = nextUser?.id ?? null;
+      const recoveryEventState = passwordRecoveryStateFromAuthEvent(event, nextUserId);
+
+      if (recoveryEventState) {
+        setPasswordRecoveryState(recoveryEventState);
+        setAuthError(recoveryEventState.error);
+      } else if (
+        event === 'INITIAL_SESSION' &&
+        recoveryRedirect.hasRecoveryIntent &&
+        !recoveryRedirect.error &&
+        !nextSession
+      ) {
+        const error = 'This password recovery link is invalid or has expired.';
+        setPasswordRecoveryState({ status: 'invalid', recoveryUserId: null, error });
+        setAuthError(error);
+      }
+
+      setSession(nextSession);
+      setUser(nextUser);
+
+      if (!nextUser) {
+        clearPrivateState(null);
+        if (!recoveryEventState && !recoveryRedirect.error) {
+          setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+        }
         setLoading(false);
         return;
       }
 
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserData(session.user).finally(() => {
-          if (mounted) setLoading(false);
+      const identityChanged = didAuthenticatedUserChange(
+        activeUserIdRef.current,
+        nextUser.id
+      );
+      if (identityChanged || event === 'INITIAL_SESSION') {
+        const expectedVersion = clearPrivateState(nextUser.id);
+        setLoading(true);
+        void loadUserData(nextUser, expectedVersion).finally(() => {
+          if (
+            mounted &&
+            canApplyPrivateStateLoad(
+              activeUserIdRef.current,
+              privateStateVersionRef.current,
+              nextUser.id,
+              expectedVersion
+            )
+          ) {
+            setLoading(false);
+          }
         });
-      } else {
-        setWorkspace(null);
-        setSavedListings([]);
-        setLoading(false);
+        return;
       }
-    });
 
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        await loadUserData(session.user);
-      } else {
-        setWorkspace(null);
-        setSavedListings([]);
-      }
       setLoading(false);
     });
 
@@ -156,6 +224,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     setAuthError(null);
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    if (!supabase) {
+      const error = configurationError();
+      setAuthError(error.message);
+      return { error };
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -171,6 +246,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithEmail = async (email: string, password: string) => {
     setAuthError(null);
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    if (!supabase) {
+      const error = configurationError();
+      setAuthError(error.message);
+      return { error };
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError(error.message);
@@ -183,6 +265,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUpWithEmail = async (email: string, password: string, fullName?: string) => {
     setAuthError(null);
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    if (!supabase) {
+      const error = configurationError();
+      setAuthError(error.message);
+      return { data: null, error };
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -207,9 +296,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     setAuthError(null);
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    if (!supabase) {
+      const error = configurationError();
+      setAuthError(error.message);
+      return { error };
+    }
+
     try {
       const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#reset-password`
+        redirectTo: `${window.location.origin}/?recovery=1`
       });
       if (error) {
         setAuthError(error.message);
@@ -231,92 +327,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result;
   };
 
+  const updateRecoveredPassword = async (newPassword: string) => {
+    setAuthError(null);
+    if (!supabase) {
+      const error = configurationError();
+      setAuthError(error.message);
+      return { error };
+    }
+
+    const result = await updateRecoveredPasswordWithSupabase(
+      passwordRecoveryState,
+      session?.user?.id ?? null,
+      supabase.auth,
+      newPassword
+    );
+    if (result.error) {
+      setAuthError(result.error.message);
+      setPasswordRecoveryState({
+        status: 'invalid',
+        recoveryUserId: null,
+        error: result.error.message
+      });
+      return result;
+    }
+
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    return result;
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
     setSession(null);
-    setWorkspace(null);
-    setSavedListings([]);
-    setSearchHistory([]);
-    setAuthError(null);
+    clearPrivateState(null);
+    setPasswordRecoveryState(EMPTY_PASSWORD_RECOVERY_STATE);
+    setAuthError(supabase ? null : SUPABASE_CONFIGURATION_ERROR);
   };
 
-  // Client-side simulation of plan upgrade in non-live demo environments only
-  const updatePlan = (planId: 'starter' | 'pro' | 'agency') => {
-    const planConfig = PRICING_PLANS[planId];
-    if (!planConfig) return;
-
-    if (isLiveSupabaseConfigured) {
-      // In production live session, client cannot self-assign paid tiers directly
-      console.warn('Direct plan updates must be executed via verified payment gateway.');
-      return;
-    }
-
-    setWorkspace((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        plan: planId,
-        creditsRemaining: planConfig.creditsPerMonth,
-        totalCredits: planConfig.creditsPerMonth,
-        maxSavedListings: planConfig.maxSavedListings
-      };
-    });
+  const updatePlan = (_planId: 'starter' | 'pro' | 'agency') => {
+    console.warn('Direct plan updates require verified billing and are unavailable in M1.');
   };
 
-  // Authoritative credit deduction
+  // M1 paid research is disabled. Credit mutations are backend-only in P1-B,
+  // so the browser must not call any credit RPC.
   const consumeCredits = async (
-    amount: number,
-    metadata?: { keyword: string; pages: number; listingsFound: number }
+    _amount: number,
+    _metadata?: { keyword: string; pages: number; listingsFound: number }
   ): Promise<boolean> => {
-    if (!workspace) return false;
-    if (workspace.creditsRemaining < amount) return false;
-
-    if (isLiveSupabaseConfigured && user) {
-      // Authoritative Supabase RPC call
-      try {
-        const { data, error } = await (supabase as any).rpc('consume_research_credits', {
-          p_keyword: metadata?.keyword || 'Query',
-          p_pages: metadata?.pages || 1,
-          p_listings_count: metadata?.listingsFound || 0
-        });
-
-        if (error || !data?.success) {
-          console.error('RPC consume_research_credits failed:', error);
-          return false;
-        }
-
-        setWorkspace((prev) =>
-          prev ? { ...prev, creditsRemaining: data.credits_remaining } : null
-        );
-      } catch (err) {
-        console.error('Failed to consume credits via RPC:', err);
-        return false;
-      }
-    } else {
-      // Local fallback deduction
-      setWorkspace((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          creditsRemaining: Math.max(0, prev.creditsRemaining - amount)
-        };
-      });
-    }
-
-    if (metadata) {
-      const historyItem: ResearchSearchHistoryItem = {
-        id: `hist-${Date.now()}`,
-        keyword: metadata.keyword,
-        pagesRequested: metadata.pages,
-        creditsConsumed: amount,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        listingsFound: metadata.listingsFound
-      };
-      setSearchHistory((prev) => [historyItem, ...prev.slice(0, 49)]);
-    }
-
-    return true;
+    return false;
   };
 
   const isListingSaved = (productId: string): boolean => {
@@ -327,21 +387,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     product: EtsyProductItem,
     notes?: string
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
+      return { success: false, error: 'Sign in with a configured Supabase account to save listings.' };
+    }
+
     if (isListingSaved(product.id)) {
       return { success: false, error: 'Listing is already saved in your library.' };
     }
 
-    const currentLimit = workspace?.maxSavedListings || 50;
+    const currentLimit = workspace.maxSavedListings;
     if (savedListings.length >= currentLimit) {
       return {
         success: false,
-        error: `Saved listings quota reached (${savedListings.length}/${currentLimit}). Upgrade your plan in Settings to save more listings.`
+        error: getSavedListingQuotaMessage(savedListings.length, currentLimit)
       };
     }
 
     const newItem: SavedListingItem = {
       id: `saved-${Date.now()}`,
-      workspaceId: workspace?.id || 'ws-personal',
+      workspaceId: workspace.id,
       productId: product.id,
       identifier: product.identifier,
       title: product.title,
@@ -355,25 +419,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       notes: notes || ''
     };
 
-    if (isLiveSupabaseConfigured && user) {
-      const { error } = await supabase.from('saved_listings').insert({
-        user_id: user.id,
-        product_identifier: product.identifier,
-        title: product.title,
-        shop_name: product.shopName,
-        image_url: product.imageUrl,
-        category: product.category,
-        observed_price: product.observedPrice,
-        estimated_monthly_revenue: product.estimatedMonthlyRevenue,
-        competition_level: product.competition,
-        stage: product.stage,
-        tags: product.tags,
-        notes: notes || null
-      });
+    const { error } = await supabase.from('saved_listings').insert({
+      user_id: user.id,
+      product_identifier: product.identifier,
+      title: product.title,
+      shop_name: product.shopName,
+      image_url: product.imageUrl,
+      category: product.category,
+      observed_price: product.observedPrice,
+      estimated_monthly_revenue: product.estimatedMonthlyRevenue,
+      competition_level: product.competition,
+      stage: product.stage,
+      tags: product.tags,
+      notes: notes || null
+    });
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
+    if (error) {
+      return {
+        success: false,
+        error: getSavedListingInsertErrorMessage(
+          error,
+          savedListings.length,
+          currentLimit
+        )
+      };
     }
 
     setSavedListings((prev) => [newItem, ...prev]);
@@ -385,13 +454,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeSavedListing = async (productId: string) => {
-    if (isLiveSupabaseConfigured && user) {
-      await supabase
-        .from('saved_listings')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('product_identifier', productId);
-    }
+    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) return;
+
+    await supabase
+      .from('saved_listings')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('product_identifier', productId);
 
     setSavedListings((prev) => prev.filter((item) => item.productId !== productId));
     setWorkspace((prev) =>
@@ -400,12 +469,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearHistory = async () => {
-    if (isLiveSupabaseConfigured && user) {
-      await supabase
-        .from('research_history')
-        .delete()
-        .eq('user_id', user.id);
-    }
+    if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) return;
+
+    await supabase
+      .from('research_history')
+      .delete()
+      .eq('user_id', user.id);
     setSearchHistory([]);
   };
 
@@ -420,11 +489,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         savedListings,
         searchHistory,
         authError,
+        passwordRecoveryStatus: passwordRecoveryState.status,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
         resetPassword,
         updatePassword,
+        updateRecoveredPassword,
         signOut,
         updatePlan,
         consumeCredits,

@@ -61,6 +61,20 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [competitionFilter, setCompetitionFilter] = useState<string>('all');
   const [minMarginFilter, setMinMarginFilter] = useState<number>(0);
+  const [savedListingError, setSavedListingError] = useState<string | null>(null);
+
+  const handleSavedListingToggle = async (product: EtsyProductItem) => {
+    setSavedListingError(null);
+    if (isListingSaved(product.id)) {
+      await removeSavedListing(product.id);
+      return;
+    }
+
+    const result = await saveListing(product);
+    if (!result.success) {
+      setSavedListingError(result.error || 'Unable to save this listing right now.');
+    }
+  };
 
   // Group columns for Kanban board
   const STAGES: { key: ResearchStage; title: string; color: string }[] = [
@@ -267,6 +281,19 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
 
         {/* Main Tab Rendering Area */}
         <div className="flex-1 overflow-y-auto p-6">
+          {savedListingError && (
+            <div role="alert" className="mb-4 p-3 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center justify-between gap-3">
+              <span>{savedListingError}</span>
+              <button
+                type="button"
+                onClick={() => setSavedListingError(null)}
+                className="text-[#8a8f98] hover:text-white"
+                aria-label="Dismiss saved listing error"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {activeTab === 'board' && (
             <div className="space-y-6">
               {/* Secondary Filter Strip */}
@@ -404,11 +431,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (isListingSaved(prod.id)) {
-                                        removeSavedListing(prod.id);
-                                      } else {
-                                        saveListing(prod);
-                                      }
+                                      void handleSavedListingToggle(prod);
                                     }}
                                     className={`p-1 rounded hover:bg-[#282835] transition-colors ${
                                       isListingSaved(prod.id)
