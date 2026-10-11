@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { EtsyProductItem } from '../types/etsyHunter';
+import type { AdminPage } from '../appRoutes';
 
 interface EtsyHunterSEOProps {
-  viewMode: 'landing' | 'workspace';
+  viewMode: 'landing' | 'workspace' | 'admin';
   activeTab?: 'board' | 'watchlist' | 'settings';
+  adminPage?: AdminPage;
   workspaceName?: string;
   selectedProduct?: EtsyProductItem | null;
 }
@@ -11,6 +13,7 @@ interface EtsyHunterSEOProps {
 export const EtsyHunterSEO: React.FC<EtsyHunterSEOProps> = ({
   viewMode,
   activeTab,
+  adminPage,
   workspaceName,
   selectedProduct
 }) => {
@@ -23,6 +26,12 @@ export const EtsyHunterSEO: React.FC<EtsyHunterSEOProps> = ({
       title = 'Etsy Hunter — Product Research & Market Intelligence for Sellers';
       description =
         'Etsy product research and market intelligence tool. Evaluate niches, inspect candidate tags, analyze observed marketplace signals, and model demand metrics.';
+    } else if (viewMode === 'admin') {
+      const pageName = adminPage === 'not_found'
+        ? 'Page Not Found'
+        : (adminPage || 'overview').replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+      title = `${pageName} | Admin Console — Etsy Hunter`;
+      description = 'Protected Etsy Hunter administration workspace.';
     } else if (viewMode === 'workspace') {
       const wsTitle = workspaceName || 'Personal Workspace';
       if (selectedProduct) {
@@ -64,7 +73,7 @@ export const EtsyHunterSEO: React.FC<EtsyHunterSEOProps> = ({
 
     let twitterDesc = document.querySelector('meta[name="twitter:description"]');
     if (twitterDesc) twitterDesc.setAttribute('content', description);
-  }, [viewMode, activeTab, workspaceName, selectedProduct]);
+  }, [viewMode, activeTab, adminPage, workspaceName, selectedProduct]);
 
   return null;
 };

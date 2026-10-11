@@ -10,13 +10,14 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node tests/run-tsx.cjs --test tests/m1-p0-security.test.ts tests/m1-p1a-auth-state.test.ts tests/m1-p1b-database-security.test.ts tests/m1-foundation-backfill-preflight.test.ts tests/m1-integration-security.test.ts tests/m15-admin-rbac.test.ts",
+    "test": "node tests/run-tsx.cjs --test tests/m1-p0-security.test.ts tests/m1-p1a-auth-state.test.ts tests/m1-p1b-database-security.test.ts tests/m1-foundation-backfill-preflight.test.ts tests/m1-integration-security.test.ts tests/m15-admin-rbac.test.ts tests/slice1-routing-authorization.test.ts",
     "test:p0": "node tests/run-tsx.cjs --test tests/m1-p0-security.test.ts",
     "test:p1a": "node tests/run-tsx.cjs --test tests/m1-p1a-auth-state.test.ts",
     "test:p1b": "node tests/run-tsx.cjs --test tests/m1-p1b-database-security.test.ts",
     "test:preflight": "node tests/run-tsx.cjs --test tests/m1-foundation-backfill-preflight.test.ts",
     "test:integration": "node tests/run-tsx.cjs --test tests/m1-integration-security.test.ts",
-    "test:admin": "node tests/run-tsx.cjs --test tests/m15-admin-rbac.test.ts"
+    "test:admin": "node tests/run-tsx.cjs --test tests/m15-admin-rbac.test.ts",
+    "test:routing": "node tests/run-tsx.cjs --test tests/slice1-routing-authorization.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

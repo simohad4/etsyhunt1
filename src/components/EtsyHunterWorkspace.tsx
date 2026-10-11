@@ -14,7 +14,9 @@ import {
   Percent,
   Layers,
   ExternalLink,
-  Info
+  Info,
+  Menu,
+  X
 } from 'lucide-react';
 import { EtsyProductItem, ResearchStage, CompetitionLevel } from '../types/etsyHunter';
 import { EtsyHunterWorkspaceSwitcher } from './EtsyHunterWorkspaceSwitcher';
@@ -33,6 +35,7 @@ interface EtsyHunterWorkspaceProps {
   activeTab?: 'board' | 'watchlist' | 'settings';
   onTabChange?: (tab: 'board' | 'watchlist' | 'settings') => void;
   onSeedSampleProducts?: () => void;
+  onSignedOut?: () => void;
 }
 
 export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
@@ -44,19 +47,22 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   onUpdateProductStage,
   activeTab: externalActiveTab,
   onTabChange,
-  onSeedSampleProducts
+  onSeedSampleProducts,
+  onSignedOut
 }) => {
   const { user, workspace, savedListings, isListingSaved, saveListing, removeSavedListing, signOut } = useAuth();
 
   const [internalActiveTab, setInternalActiveTab] = useState<'board' | 'watchlist' | 'settings'>('board');
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+  const [sidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleTabSelect = (tab: 'board' | 'watchlist' | 'settings') => {
+    setMobileSidebarOpen(false);
     if (onTabChange) onTabChange(tab);
     else setInternalActiveTab(tab);
   };
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [competitionFilter, setCompetitionFilter] = useState<string>('all');
@@ -105,19 +111,42 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   const categories = Array.from(new Set(products.map((p) => p.category)));
 
   return (
-    <div className="flex h-screen w-full bg-[#0b0b0f] text-[#f7f8f8] overflow-hidden">
+    <div className="flex h-dvh w-full bg-[#0b0b0f] text-[#f7f8f8] overflow-hidden">
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/65 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-label="Close workspace navigation overlay"
+        />
+      )}
       {/* 1. Left Minimalist Sidebar */}
       <aside
-        className={`shrink-0 border-r border-[#22222b] bg-[#0b0b0f] flex flex-col justify-between transition-all duration-200 z-30 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
+        className={`fixed inset-y-0 left-0 lg:static shrink-0 border-r border-[#22222b] bg-[#0b0b0f] flex flex-col justify-between transition-all duration-200 z-50 lg:z-30 ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${
+          sidebarCollapsed ? 'w-64 lg:w-16' : 'w-72 lg:w-64'
         }`}
+        aria-label="Customer workspace navigation"
       >
         <div className="p-3 space-y-4">
           {/* Personal Workspace Switcher/Badge */}
-          <EtsyHunterWorkspaceSwitcher
-            collapsed={sidebarCollapsed}
-            onOpenSettings={() => handleTabSelect('settings')}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <EtsyHunterWorkspaceSwitcher
+                collapsed={sidebarCollapsed}
+                onOpenSettings={() => handleTabSelect('settings')}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg text-[#8a8f98] hover:text-white hover:bg-[#18181f]"
+              aria-label="Close workspace navigation"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Quick Action: Search Keywords & Listings */}
           <button
@@ -222,7 +251,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
 
             {!sidebarCollapsed && (
               <button
-                onClick={() => signOut()}
+                onClick={() => void signOut().then(onSignedOut)}
                 className="p-1 rounded text-[#575a65] hover:text-[#e5484d] transition-colors cursor-pointer"
                 title="Log out"
               >
@@ -234,17 +263,25 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
       </aside>
 
       {/* 2. Main Content Workspace */}
-      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-[#0b0b0f]">
+      <div className="flex-1 flex flex-col h-dvh min-w-0 overflow-hidden bg-[#0b0b0f]">
         {/* Top Workspace Header & Breadcrumbs */}
-        <header className="h-14 px-6 border-b border-[#22222b] flex items-center justify-between gap-4 bg-[#0e0e13]/80 backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-2 text-xs">
+        <header className="h-14 px-3 sm:px-6 border-b border-[#22222b] flex items-center justify-between gap-3 bg-[#0e0e13]/80 backdrop-blur-sm shrink-0">
+          <div className="flex items-center gap-2 text-xs min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-lg text-[#8a8f98] hover:text-white hover:bg-[#18181f] shrink-0"
+              aria-label="Open workspace navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <span className="text-[#8a8f98]">Workspace</span>
-            <ChevronRight className="w-3.5 h-3.5 text-[#575a65]" />
-            <span className="text-[#f7f8f8] font-medium">
+            <ChevronRight className="hidden sm:block w-3.5 h-3.5 text-[#575a65]" />
+            <span className="hidden sm:block text-[#f7f8f8] font-medium truncate">
               {workspace?.name || 'Personal Workspace'}
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-[#575a65]" />
-            <span className="text-[#707bfb] font-mono capitalize">
+            <ChevronRight className="hidden sm:block w-3.5 h-3.5 text-[#575a65]" />
+            <span className="text-[#707bfb] font-mono capitalize truncate">
               {activeTab === 'board' ? 'Research Pipeline' : activeTab === 'watchlist' ? 'Saved Listings' : 'Settings'}
             </span>
           </div>
@@ -256,9 +293,9 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                 placeholder="Search listings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 sm:w-64 pl-8 pr-3 py-1.5 rounded-lg bg-[#121216] border border-[#22222b] text-xs text-[#f7f8f8] placeholder-[#575a65] focus:outline-none focus:border-[#5e6ad2]"
+                className="hidden md:block w-48 xl:w-64 pl-8 pr-3 py-1.5 rounded-lg bg-[#121216] border border-[#22222b] text-xs text-[#f7f8f8] placeholder-[#575a65] focus:outline-none focus:border-[#5e6ad2]"
               />
-              <Search className="w-3.5 h-3.5 text-[#575a65] absolute left-2.5 top-2" />
+              <Search className="hidden md:block w-3.5 h-3.5 text-[#575a65] absolute left-2.5 top-2" />
             </div>
 
             <button
@@ -280,7 +317,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
         />
 
         {/* Main Tab Rendering Area */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
           {savedListingError && (
             <div role="alert" className="mb-4 p-3 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-xs text-[#e5484d] flex items-center justify-between gap-3">
               <span>{savedListingError}</span>

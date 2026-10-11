@@ -18,20 +18,41 @@ import { EtsyProductItem, ResearchStage } from './types/etsyHunter';
 import { DEMO_ETSY_PRODUCTS } from './data/mockEtsyHunterData';
 import { AlertCircle, X } from 'lucide-react';
 import { canAccessPrivateWorkspace } from './security/workspaceAccess';
+import {
+  customerPathForPage,
+  resolveAppRoute,
+  useBrowserPath
+} from './appRoutes';
+import { EtsyHunterAdminRoute } from './components/EtsyHunterAdminShell';
+import {
+  RouteAccessState,
+  RouteLoadingState,
+  RouteNotFoundState
+} from './components/AppRouteStates';
 
 function AppContent() {
-  const { user, workspace, isLiveSupabase, passwordRecoveryStatus } = useAuth();
+  const {
+    user,
+    session,
+    workspace,
+    loading,
+    authError,
+    isLiveSupabase,
+    passwordRecoveryStatus
+  } = useAuth();
+  const { pathname, navigate } = useBrowserPath();
+  const route = resolveAppRoute(pathname);
   const hasPrivateWorkspaceAccess = canAccessPrivateWorkspace({
     isSupabaseConfigured: isLiveSupabase,
     user,
     workspace
   });
 
-  // Navigation mode: 'landing' | 'workspace'
-  const [viewMode, setViewMode] = useState<'landing' | 'workspace'>('landing');
-
-  // Active workspace tab
-  const [workspaceTab, setWorkspaceTab] = useState<'board' | 'watchlist' | 'settings'>('board');
+  const workspaceTab = route.scope === 'customer' && route.page === 'saved'
+    ? 'watchlist'
+    : route.scope === 'customer' && route.page === 'settings'
+      ? 'settings'
+      : 'board';
 
   // Authenticated product-board state is session-only and never shared with the public demo.
   const [products, setProducts] = useState<EtsyProductItem[]>([]);
@@ -55,7 +76,6 @@ function AppContent() {
     setIsTagAnalyzerOpen(false);
     setIsCommandMenuOpen(false);
     setCreditAlert(null);
-    if (!user) setViewMode('landing');
   }, [user?.id]);
 
   useEffect(() => {
@@ -150,15 +170,16 @@ function AppContent() {
   };
 
   const handleLoginSuccess = () => {
-    setViewMode('workspace');
+    navigate('/app/board');
   };
 
   return (
     <div className="min-h-screen bg-[#0b0b0f] text-[#f7f8f8] selection:bg-[#5e6ad2] selection:text-white font-sans antialiased">
       {/* Dynamic SEO Document Title & Meta Updater */}
       <EtsyHunterSEO
-        viewMode={viewMode}
+        viewMode={route.scope === 'public' ? 'landing' : route.scope === 'admin' ? 'admin' : 'workspace'}
         activeTab={workspaceTab}
+        adminPage={route.scope === 'admin' ? route.page : undefined}
         workspaceName={workspace?.name}
         selectedProduct={selectedProduct}
       />
@@ -180,23 +201,45 @@ function AppContent() {
         </div>
       )}
 
-      {viewMode === 'workspace' && hasPrivateWorkspaceAccess ? (
-        /* Authenticated Personal Workspace */
-        <EtsyHunterWorkspace
-          onBackToLanding={() => setViewMode('landing')}
-          onOpenTagAnalyzer={() => setIsTagAnalyzerOpen(true)}
-          onOpenCommandMenu={() => setIsCommandMenuOpen(true)}
-          onSelectProduct={(product) => {
-            setSelectedProduct(product);
-            setIsProductDetailOpen(true);
-          }}
-          products={products}
-          onUpdateProductStage={handleUpdateProductStage}
-          activeTab={workspaceTab}
-          onTabChange={setWorkspaceTab}
-          onSeedSampleProducts={handleSeedDemoData}
-        />
-      ) : (
+      {route.scope === 'customer' ? (
+        loading ? (
+          <RouteLoadingState />
+        ) : !isLiveSupabase ? (
+          <RouteAccessState kind="unavailable" message={authError || 'Supabase authentication is not configured.'} onHome={() => navigate('/')} />
+        ) : !user || !session ? (
+          <RouteAccessState kind="unauthorized" message="Sign in with your Etsy Hunter account to open this private workspace." onHome={() => navigate('/')} onLogin={() => { setAuthInitialMode('login'); setIsAuthOpen(true); }} />
+        ) : !hasPrivateWorkspaceAccess ? (
+          <RouteAccessState kind="unavailable" message={authError || 'Your private workspace could not be loaded.'} onHome={() => navigate('/')} />
+        ) : route.page === 'not_found' ? (
+          <RouteNotFoundState onHome={() => navigate('/')} onWorkspace={() => navigate('/app/board')} />
+        ) : (
+          <EtsyHunterWorkspace
+            onBackToLanding={() => navigate('/')}
+            onOpenTagAnalyzer={() => setIsTagAnalyzerOpen(true)}
+            onOpenCommandMenu={() => setIsCommandMenuOpen(true)}
+            onSelectProduct={(product) => {
+              setSelectedProduct(product);
+              setIsProductDetailOpen(true);
+            }}
+            products={products}
+            onUpdateProductStage={handleUpdateProductStage}
+            activeTab={workspaceTab}
+            onTabChange={(tab) => navigate(customerPathForPage(tab === 'watchlist' ? 'saved' : tab))}
+            onSeedSampleProducts={handleSeedDemoData}
+            onSignedOut={() => navigate('/')}
+          />
+        )
+      ) : route.scope === 'admin' ? (
+        loading ? (
+          <RouteLoadingState />
+        ) : !isLiveSupabase ? (
+          <RouteAccessState kind="unavailable" message={authError || 'Supabase authentication is not configured.'} onHome={() => navigate('/')} />
+        ) : !user || !session ? (
+          <RouteAccessState kind="unauthorized" message="Sign in with an authorized Etsy Hunter admin account." onHome={() => navigate('/')} onLogin={() => { setAuthInitialMode('login'); setIsAuthOpen(true); }} />
+        ) : (
+          <EtsyHunterAdminRoute page={route.page} pathname={pathname} session={session} user={user} navigate={navigate} />
+        )
+      ) : route.scope === 'public' ? (
         /* Public Landing Page */
         <div className="flex flex-col min-h-screen">
           {/* 1. Header */}
@@ -205,7 +248,7 @@ function AppContent() {
               setAuthInitialMode(mode);
               setIsAuthOpen(true);
             }}
-            onOpenWorkspace={() => setViewMode('workspace')}
+            onOpenWorkspace={() => navigate('/app/board')}
             onOpenCommandMenu={() => setIsCommandMenuOpen(true)}
           />
 
@@ -216,13 +259,13 @@ function AppContent() {
                 setAuthInitialMode(mode);
                 setIsAuthOpen(true);
               }}
-              onOpenWorkspace={() => setViewMode('workspace')}
+              onOpenWorkspace={() => navigate('/app/board')}
               onOpenResearch={() => setIsTagAnalyzerOpen(true)}
             />
 
             {/* 3. Board Preview */}
             <EtsyHunterBoardPreview
-              onOpenWorkspace={() => setViewMode('workspace')}
+              onOpenWorkspace={() => navigate('/app/board')}
               onSelectProduct={(product) => {
                 setSelectedProduct(product);
                 setIsProductDetailOpen(true);
@@ -244,13 +287,15 @@ function AppContent() {
                 setAuthInitialMode(mode);
                 setIsAuthOpen(true);
               }}
-              onOpenWorkspace={() => setViewMode('workspace')}
+              onOpenWorkspace={() => navigate('/app/board')}
             />
           </main>
 
           {/* 8. Footer */}
           <EtsyHunterFooter />
         </div>
+      ) : (
+        <RouteNotFoundState onHome={() => navigate('/')} onWorkspace={user && workspace ? () => navigate('/app/board') : undefined} />
       )}
 
       {/* Global Overlays */}
@@ -265,8 +310,8 @@ function AppContent() {
           setIsProductDetailOpen(true);
         }}
         onOpenTagAnalyzer={() => setIsTagAnalyzerOpen(true)}
-        onNavigateWorkspace={() => setViewMode('workspace')}
-        onNavigateHome={() => setViewMode('landing')}
+        onNavigateWorkspace={() => navigate('/app/board')}
+        onNavigateHome={() => navigate('/')}
       />
 
       {/* Etsy Tag Analyzer / Keyword Explorer Modal */}
