@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   CURRENT_RESEARCH_PROVIDER_PRICING,
   MAX_OPENROUTER_INPUT_BYTES,
+  MAX_OPENROUTER_INPUT_TOKENS,
   OPENROUTER_PROMPT_OVERHEAD_TOKENS,
   PINNED_APIFY_ACTOR,
   PINNED_OPENROUTER_MODEL,
@@ -81,6 +82,10 @@ test('token estimation is deterministic and includes conservative prompt overhea
   assert.equal(estimateTokenCountFromUtf8('abcdef'), 2);
   assert.equal(estimateTokenCountFromUtf8('é'), 1);
   assert.equal(estimateOpenRouterInputTokens('abcdef'), OPENROUTER_PROMPT_OVERHEAD_TOKENS + 2);
+  assert.equal(
+    estimateOpenRouterInputTokens('x'.repeat(MAX_OPENROUTER_INPUT_BYTES)),
+    MAX_OPENROUTER_INPUT_TOKENS
+  );
 
   expectEconomicsError('INVALID_REQUEST', () =>
     estimateOpenRouterInputTokens('x'.repeat(MAX_OPENROUTER_INPUT_BYTES + 1))
@@ -137,6 +142,26 @@ test('pricing readiness rejects missing, unverified, blocked, and expired config
 
   const expired = makeVerifiedPricing({ expiresAt: '2026-10-11T11:59:59.000Z' });
   expectEconomicsError('PRICING_EXPIRED', () => assertProviderPricingReady(expired, NOW));
+
+  const futureApifyVerification = makeVerifiedPricing({
+    apify: {
+      ...makeVerifiedPricing().apify,
+      verifiedAt: '2026-10-11T12:00:01.000Z'
+    }
+  });
+  expectEconomicsError('PRICING_NOT_EFFECTIVE', () =>
+    assertProviderPricingReady(futureApifyVerification, NOW)
+  );
+
+  const futureOpenRouterVerification = makeVerifiedPricing({
+    openRouter: {
+      ...makeVerifiedPricing().openRouter,
+      verifiedAt: '2026-10-11T12:00:01.000Z'
+    }
+  });
+  expectEconomicsError('PRICING_NOT_EFFECTIVE', () =>
+    assertProviderPricingReady(futureOpenRouterVerification, NOW)
+  );
 });
 
 test('bounded request validation normalizes one keyword and enforces page listing limits', () => {
