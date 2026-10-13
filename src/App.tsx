@@ -162,7 +162,7 @@ function AppContent() {
         loading ? (
           <RouteLoadingState dashboard />
         ) : !isLiveSupabase ? (
-          <RouteAccessState kind="unavailable" message={authError || 'Supabase authentication is not configured.'} onHome={() => navigate('/')} />
+          <RouteAccessState kind="unavailable" message={authError ? 'Account services are currently unavailable.' : 'Account services are not configured.'} onHome={() => navigate('/')} />
         ) : !user || !session ? (
           <RouteAccessState kind="unauthorized" message="Sign in with your Etsy Hunter account to open this private workspace." onHome={() => navigate('/')} onLogin={() => { setAuthInitialMode('login'); setIsAuthOpen(true); }} />
         ) : !hasPrivateWorkspaceAccess ? (

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Bookmark,
-  Database,
+  Archive,
   DollarSign,
   Download,
   Plus,
@@ -158,9 +158,9 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
       <DashboardPageHeader
         eyebrow="Customer workspace"
         title="Saved listings"
-        description="Review candidate listings saved to your personal Supabase workspace. Revenue values remain estimates, not verified shop sales."
+        description="Review listing candidates saved to your account. Revenue values remain estimates, not verified shop sales."
         icon={<Bookmark className="h-5 w-5" />}
-        meta={<DashboardStatusIndicator label="Supabase data" tone="success" title="These records are loaded from your authenticated workspace." />}
+        meta={<DashboardStatusIndicator label="Account data" tone="success" title="These records belong to the signed-in account." />}
         actions={
           <>
             <button
@@ -175,7 +175,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
             <button
               type="button"
               onClick={onOpenTagAnalyzer}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#5e6ad2] px-3 text-xs font-semibold text-white shadow-[0_0_14px_rgba(94,106,210,0.3)] transition-colors hover:bg-[#6875e5]"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#686cdf] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6]"
             >
               <Plus className="h-3.5 w-3.5" />
               Research preview
@@ -189,7 +189,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
           label="Saved records"
           value={savedListings.length}
           description={`${remainingSlots} workspace slots remaining`}
-          icon={<Database className="h-4 w-4" />}
+          icon={<Archive className="h-4 w-4" />}
           tone="indigo"
         />
         <DashboardStatCard
@@ -236,7 +236,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
           rows={filteredSaved}
           columns={columns}
           getRowKey={(item) => item.id}
-          caption="Saved listing records from the active Supabase workspace"
+          caption="Saved listing records for the signed-in account"
         />
       ) : savedListings.length > 0 ? (
         <DashboardEmptyState
@@ -262,7 +262,7 @@ export const EtsyHunterWatchlist: React.FC<EtsyHunterWatchlistProps> = ({ onOpen
             <button
               type="button"
               onClick={onOpenTagAnalyzer}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#5e6ad2] px-4 py-2 text-xs font-semibold text-white shadow-[0_0_16px_rgba(94,106,210,0.3)] transition-colors hover:bg-[#6875e5]"
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#686cdf] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6]"
             >
               <Plus className="h-3.5 w-3.5" />
               View research preview

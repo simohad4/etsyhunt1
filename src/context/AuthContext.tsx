@@ -418,10 +418,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        setAuthError('The local session was cleared, but Supabase could not complete sign out.');
+        setAuthError('The local session was cleared, but the account service could not complete sign out.');
       }
     } catch {
-      setAuthError('The local session was cleared, but Supabase could not complete sign out.');
+      setAuthError('The local session was cleared, but the account service could not complete sign out.');
     }
   };
 
@@ -454,7 +454,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     notes?: string
   ): Promise<WorkspaceMutationResult> => {
     if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
-      return { success: false, error: 'Sign in with a configured Supabase account to save listings.' };
+      return { success: false, error: 'Sign in with a configured account to save listings.' };
     }
 
     if (isListingSaved(product.id)) {
@@ -508,7 +508,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeSavedListing = async (productId: string): Promise<WorkspaceMutationResult> => {
     if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
-      return { success: false, error: 'Sign in with a configured Supabase account to remove saved listings.' };
+      return { success: false, error: 'Sign in with a configured account to remove saved listings.' };
     }
 
     const mutationUser = user;
@@ -534,7 +534,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearHistory = async (): Promise<WorkspaceMutationResult> => {
     if (!isLiveSupabaseConfigured || !supabase || !user || !workspace) {
-      return { success: false, error: 'Sign in with a configured Supabase account to clear research history.' };
+      return { success: false, error: 'Sign in with a configured account to clear research history.' };
     }
 
     const mutationUser = user;

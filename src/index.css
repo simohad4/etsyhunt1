@@ -99,3 +99,29 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #333342;
 }
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid #8f92f4;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

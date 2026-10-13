@@ -1,5 +1,4 @@
 import React from 'react';
-import { User, Store } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface EtsyHunterWorkspaceSwitcherProps {
@@ -14,15 +13,16 @@ export const EtsyHunterWorkspaceSwitcher: React.FC<EtsyHunterWorkspaceSwitcherPr
   const { workspace } = useAuth();
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onOpenSettings}
-      className={`w-full flex items-center justify-between p-2 rounded-lg bg-[#121216] border border-[#22222b] hover:border-[#333342] transition-colors cursor-pointer text-left ${
-        collapsed ? 'justify-center p-2' : ''
+      className={`flex w-full items-center justify-between rounded-md border border-[#24242b] bg-[#111115] p-2 text-left transition-colors hover:border-[#363640] hover:bg-[#15151a] ${
+        collapsed ? 'justify-center' : ''
       }`}
-      title="Personal Workspace Settings"
+      title="Open account settings"
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-6 h-6 rounded-md bg-[#5e6ad2] flex items-center justify-center text-white shrink-0 font-bold text-xs shadow-sm">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#777bea]/50 bg-[#686cdf] text-xs font-bold text-white">
           {workspace?.name?.charAt(0) || 'P'}
         </div>
         {!collapsed && (
@@ -38,6 +38,6 @@ export const EtsyHunterWorkspaceSwitcher: React.FC<EtsyHunterWorkspaceSwitcherPr
           </div>
         )}
       </div>
-    </div>
+    </button>
   );
 };

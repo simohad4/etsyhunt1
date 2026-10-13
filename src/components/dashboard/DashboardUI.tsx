@@ -5,19 +5,19 @@ type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 type StatTone = 'neutral' | 'indigo' | 'green' | 'yellow' | 'red';
 
 const statusToneClasses: Record<StatusTone, string> = {
-  neutral: 'border-[#343440] bg-[#18181f] text-[#a4a8b0]',
-  info: 'border-[#5e6ad2]/40 bg-[#5e6ad2]/12 text-[#aab1ff]',
-  success: 'border-[#30a46c]/35 bg-[#30a46c]/10 text-[#55c58b]',
-  warning: 'border-[#f5d90a]/30 bg-[#f5d90a]/10 text-[#e8d76b]',
-  danger: 'border-[#e5484d]/35 bg-[#e5484d]/10 text-[#ff7b80]'
+  neutral: 'border-[#2b2b32] bg-[#17171c] text-[#a1a1aa]',
+  info: 'border-[#6c70dc]/35 bg-[#6c70dc]/10 text-[#b6b8ff]',
+  success: 'border-[#30a46c]/30 bg-[#30a46c]/10 text-[#65d39a]',
+  warning: 'border-[#d6b84c]/30 bg-[#d6b84c]/10 text-[#e8d58c]',
+  danger: 'border-[#e5484d]/30 bg-[#e5484d]/10 text-[#ff8b8f]'
 };
 
 const statToneClasses: Record<StatTone, string> = {
-  neutral: 'bg-[#8a8f98]/10 text-[#a4a8b0]',
-  indigo: 'bg-[#5e6ad2]/15 text-[#8f98ff]',
-  green: 'bg-[#30a46c]/12 text-[#55c58b]',
-  yellow: 'bg-[#f5d90a]/10 text-[#e8d76b]',
-  red: 'bg-[#e5484d]/10 text-[#ff7b80]'
+  neutral: 'bg-[#202027] text-[#b5b5be]',
+  indigo: 'bg-[#6c70dc]/12 text-[#a9acff]',
+  green: 'bg-[#30a46c]/10 text-[#65d39a]',
+  yellow: 'bg-[#d6b84c]/10 text-[#e8d58c]',
+  red: 'bg-[#e5484d]/10 text-[#ff8b8f]'
 };
 
 interface DashboardPageHeaderProps {
@@ -29,43 +29,22 @@ interface DashboardPageHeaderProps {
   actions?: React.ReactNode;
 }
 
-export function DashboardPageHeader({
-  eyebrow,
-  title,
-  description,
-  icon,
-  meta,
-  actions
-}: DashboardPageHeaderProps) {
+export function DashboardPageHeader({ eyebrow, title, description, icon, meta, actions }: DashboardPageHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-[#22222b] bg-[#111117] p-4 shadow-[0_16px_44px_rgba(0,0,0,0.18)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <header className="flex flex-col gap-4 border-b border-[#24242b] pb-5 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
-        {icon && (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#343447] bg-[#191923] text-[#8f98ff] shadow-[0_0_22px_rgba(94,106,210,0.12)]">
-            {icon}
-          </div>
-        )}
+        {icon && <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#2b2b34] bg-[#17171d] text-[#9da0ff]">{icon}</div>}
         <div className="min-w-0">
-          {eyebrow && (
-            <div className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#707bfb]">
-              {eyebrow}
-            </div>
-          )}
+          {eyebrow && <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7e82e8]">{eyebrow}</div>}
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-lg font-semibold tracking-[-0.02em] text-[#f7f8f8] sm:text-xl">
-              {title}
-            </h1>
+            <h1 className="text-xl font-semibold tracking-[-0.025em] text-[#f4f4f5] sm:text-2xl">{title}</h1>
             {meta}
           </div>
-          {description && (
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-[#8a8f98] sm:text-[13px]">
-              {description}
-            </p>
-          )}
+          {description && <p className="mt-1.5 max-w-2xl text-xs leading-5 text-[#91919b] sm:text-[13px]">{description}</p>}
         </div>
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{actions}</div>}
-    </div>
+    </header>
   );
 }
 
@@ -77,29 +56,17 @@ interface DashboardStatCardProps {
   tone?: StatTone;
 }
 
-export function DashboardStatCard({
-  label,
-  value,
-  description,
-  icon,
-  tone = 'neutral'
-}: DashboardStatCardProps) {
+export function DashboardStatCard({ label, value, description, icon, tone = 'neutral' }: DashboardStatCardProps) {
   return (
-    <div className="group rounded-xl border border-[#22222b] bg-[#121216] p-4 transition-[border-color,background-color,transform] duration-150 hover:-translate-y-0.5 hover:border-[#343447] hover:bg-[#15151b]">
+    <div className="group rounded-lg border border-[#24242b] bg-[#131317] p-4 transition-colors duration-150 hover:border-[#363640] hover:bg-[#15151a]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium text-[#8a8f98]">{label}</div>
-          <div className="mt-1 font-mono text-xl font-semibold tracking-[-0.04em] text-[#f7f8f8]">
-            {value}
-          </div>
+          <div className="text-[11px] font-medium text-[#91919b]">{label}</div>
+          <div className="mt-1 text-xl font-semibold tabular-nums tracking-[-0.035em] text-[#f4f4f5]">{value}</div>
         </div>
-        {icon && (
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${statToneClasses[tone]}`}>
-            {icon}
-          </div>
-        )}
+        {icon && <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${statToneClasses[tone]}`}>{icon}</div>}
       </div>
-      {description && <p className="mt-2 text-[11px] leading-4 text-[#575a65]">{description}</p>}
+      {description && <p className="mt-2 text-[11px] leading-4 text-[#70707a]">{description}</p>}
     </div>
   );
 }
@@ -114,26 +81,17 @@ interface DashboardSectionCardProps {
   bodyClassName?: string;
 }
 
-export function DashboardSectionCard({
-  children,
-  title,
-  description,
-  icon,
-  action,
-  className = '',
-  bodyClassName = 'p-4 sm:p-5'
-}: DashboardSectionCardProps) {
+export function DashboardSectionCard({ children, title, description, icon, action, className = '', bodyClassName = 'p-4 sm:p-5' }: DashboardSectionCardProps) {
   const hasHeader = title || description || icon || action;
-
   return (
-    <section className={`overflow-hidden rounded-xl border border-[#22222b] bg-[#121216] ${className}`}>
+    <section className={`overflow-hidden rounded-lg border border-[#24242b] bg-[#131317] ${className}`}>
       {hasHeader && (
-        <div className="flex flex-col gap-3 border-b border-[#22222b] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-3 border-b border-[#24242b] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex min-w-0 items-start gap-2.5">
-            {icon && <div className="mt-0.5 text-[#707bfb]">{icon}</div>}
+            {icon && <div className="mt-0.5 text-[#8589ee]">{icon}</div>}
             <div>
-              {title && <h2 className="text-sm font-semibold text-[#f7f8f8]">{title}</h2>}
-              {description && <p className="mt-0.5 text-[11px] leading-4 text-[#8a8f98]">{description}</p>}
+              {title && <h2 className="text-sm font-semibold text-[#f4f4f5]">{title}</h2>}
+              {description && <p className="mt-0.5 text-[11px] leading-4 text-[#91919b]">{description}</p>}
             </div>
           </div>
           {action && <div className="shrink-0">{action}</div>}
@@ -153,45 +111,18 @@ interface DashboardFilterBarProps {
   resultLabel?: React.ReactNode;
 }
 
-export function DashboardFilterBar({
-  value,
-  onChange,
-  placeholder = 'Search…',
-  ariaLabel = 'Search',
-  children,
-  resultLabel
-}: DashboardFilterBarProps) {
+export function DashboardFilterBar({ value, onChange, placeholder = 'Search…', ariaLabel = 'Search', children, resultLabel }: DashboardFilterBarProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[#22222b] bg-[#111117] p-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-[#24242b] bg-[#111115] p-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#575a65]" />
-          <input
-            type="search"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            aria-label={ariaLabel}
-            className="h-9 w-full rounded-lg border border-[#2a2a36] bg-[#18181f] pl-9 pr-9 text-xs text-[#f7f8f8] outline-none transition-[border-color,box-shadow] placeholder:text-[#575a65] focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/15"
-          />
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#575a65] transition-colors hover:bg-[#282835] hover:text-white"
-              aria-label="Clear search"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#666670]" />
+          <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} aria-label={ariaLabel} className="h-9 w-full rounded-md border border-[#2b2b34] bg-[#18181d] pl-9 pr-9 text-xs text-[#f4f4f5] outline-none transition-[border-color,box-shadow] placeholder:text-[#666670] focus:border-[#7478e6] focus:ring-2 focus:ring-[#7478e6]/15" />
+          {value && <button type="button" onClick={() => onChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#666670] transition-colors hover:bg-[#292930] hover:text-white" aria-label="Clear search"><X className="h-3 w-3" /></button>}
         </div>
         {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
       </div>
-      {resultLabel && (
-        <div className="shrink-0 font-mono text-[10px] text-[#70737e]" aria-live="polite">
-          {resultLabel}
-        </div>
-      )}
+      {resultLabel && <div className="shrink-0 text-[10px] tabular-nums text-[#777781]" aria-live="polite">{resultLabel}</div>}
     </div>
   );
 }
@@ -212,37 +143,17 @@ interface DashboardDataTableProps<Row> {
   className?: string;
 }
 
-export function DashboardDataTable<Row>({
-  rows,
-  columns,
-  getRowKey,
-  caption,
-  className = ''
-}: DashboardDataTableProps<Row>) {
+export function DashboardDataTable<Row>({ rows, columns, getRowKey, caption, className = '' }: DashboardDataTableProps<Row>) {
   return (
-    <div className={`overflow-hidden rounded-xl border border-[#22222b] bg-[#121216] ${className}`}>
+    <div className={`overflow-hidden rounded-lg border border-[#24242b] bg-[#131317] ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-left text-xs">
           <caption className="sr-only">{caption}</caption>
-          <thead className="border-b border-[#22222b] bg-[#0e0e13] font-mono text-[10px] uppercase tracking-[0.08em] text-[#70737e]">
-            <tr>
-              {columns.map((column) => (
-                <th key={column.key} scope="col" className={`px-4 py-3 font-medium ${column.headerClassName || ''}`}>
-                  {column.header}
-                </th>
-              ))}
-            </tr>
+          <thead className="border-b border-[#24242b] bg-[#101014] text-[10px] uppercase tracking-[0.08em] text-[#777781]">
+            <tr>{columns.map((column) => <th key={column.key} scope="col" className={`px-4 py-3 font-medium ${column.headerClassName || ''}`}>{column.header}</th>)}</tr>
           </thead>
-          <tbody className="divide-y divide-[#22222b]/70">
-            {rows.map((row) => (
-              <tr key={getRowKey(row)} className="transition-colors hover:bg-[#18181f]">
-                {columns.map((column) => (
-                  <td key={column.key} className={`px-4 py-3 ${column.className || ''}`}>
-                    {column.render(row)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+          <tbody className="divide-y divide-[#24242b]">
+            {rows.map((row) => <tr key={getRowKey(row)} className="transition-colors hover:bg-[#18181d]">{columns.map((column) => <td key={column.key} className={`px-4 py-3 ${column.className || ''}`}>{column.render(row)}</td>)}</tr>)}
           </tbody>
         </table>
       </div>
@@ -258,80 +169,37 @@ interface DashboardEmptyStateProps {
   secondaryAction?: React.ReactNode;
 }
 
-export function DashboardEmptyState({
-  title,
-  description,
-  icon,
-  action,
-  secondaryAction
-}: DashboardEmptyStateProps) {
+export function DashboardEmptyState({ title, description, icon, action, secondaryAction }: DashboardEmptyStateProps) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#2d2d3a] bg-[#111117] px-5 py-12 text-center sm:py-14">
-      {icon && (
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-[#343447] bg-[#191923] text-[#707bfb] shadow-[0_0_28px_rgba(94,106,210,0.12)]">
-          {icon}
-        </div>
-      )}
-      <h2 className="mt-4 text-sm font-semibold text-[#f7f8f8]">{title}</h2>
-      <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-[#8a8f98]">{description}</p>
-      {(action || secondaryAction) && (
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-          {action}
-          {secondaryAction}
-        </div>
-      )}
+    <div className="rounded-lg border border-dashed border-[#303039] bg-[#111115] px-5 py-10 text-center sm:py-12">
+      {icon && <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg border border-[#303039] bg-[#18181e] text-[#8f92f4]">{icon}</div>}
+      <h2 className="mt-4 text-sm font-semibold text-[#f4f4f5]">{title}</h2>
+      <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-[#91919b]">{description}</p>
+      {(action || secondaryAction) && <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">{action}{secondaryAction}</div>}
     </div>
   );
 }
 
-interface DashboardLoadingSkeletonProps {
-  rows?: number;
-  label?: string;
-}
+interface DashboardLoadingSkeletonProps { rows?: number; label?: string; }
 
 export function DashboardLoadingSkeleton({ rows = 4, label = 'Loading dashboard data' }: DashboardLoadingSkeletonProps) {
   return (
     <div className="space-y-4" role="status" aria-label={label}>
       <span className="sr-only">{label}</span>
-      <div className="h-28 animate-pulse rounded-2xl border border-[#22222b] bg-[#121216]" />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: Math.min(rows, 4) }, (_, index) => (
-          <div key={index} className="h-24 animate-pulse rounded-xl border border-[#22222b] bg-[#121216]" />
-        ))}
-      </div>
-      <div className="overflow-hidden rounded-xl border border-[#22222b] bg-[#121216]">
-        {Array.from({ length: rows }, (_, index) => (
-          <div key={index} className="flex gap-3 border-b border-[#22222b] p-4 last:border-0">
-            <div className="h-9 w-9 animate-pulse rounded-lg bg-[#1c1c24]" />
-            <div className="flex-1 space-y-2 py-1">
-              <div className="h-2.5 w-1/3 animate-pulse rounded bg-[#24242e]" />
-              <div className="h-2 w-2/3 animate-pulse rounded bg-[#1c1c24]" />
-            </div>
-          </div>
-        ))}
+      <div className="h-24 animate-pulse rounded-lg border border-[#24242b] bg-[#131317]" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: Math.min(rows, 4) }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-lg border border-[#24242b] bg-[#131317]" />)}</div>
+      <div className="overflow-hidden rounded-lg border border-[#24242b] bg-[#131317]">
+        {Array.from({ length: rows }, (_, index) => <div key={index} className="flex gap-3 border-b border-[#24242b] p-4 last:border-0"><div className="h-9 w-9 animate-pulse rounded-md bg-[#1d1d23]" /><div className="flex-1 space-y-2 py-1"><div className="h-2.5 w-1/3 animate-pulse rounded bg-[#24242c]" /><div className="h-2 w-2/3 animate-pulse rounded bg-[#1d1d23]" /></div></div>)}
       </div>
     </div>
   );
 }
 
-interface DashboardStatusIndicatorProps {
-  label: string;
-  tone?: StatusTone;
-  dot?: boolean;
-  title?: string;
-}
+interface DashboardStatusIndicatorProps { label: string; tone?: StatusTone; dot?: boolean; title?: string; }
 
-export function DashboardStatusIndicator({
-  label,
-  tone = 'neutral',
-  dot = true,
-  title
-}: DashboardStatusIndicatorProps) {
+export function DashboardStatusIndicator({ label, tone = 'neutral', dot = true, title }: DashboardStatusIndicatorProps) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] ${statusToneClasses[tone]}`}
-      title={title}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${statusToneClasses[tone]}`} title={title}>
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}
       {label}
     </span>

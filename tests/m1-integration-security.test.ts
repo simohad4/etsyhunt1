@@ -139,6 +139,6 @@ test('research UI cannot invoke providers or save sample keyword metrics into cu
 
   assert.doesNotMatch(modalSource, /consumeCredits/);
   assert.doesNotMatch(modalSource, /onAddProduct/);
-  assert.match(modalSource, /Research providers are disabled/);
+  assert.match(modalSource, /Live research is paused/);
   assert.match(modalSource, /Demo preview/);
 });

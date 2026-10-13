@@ -45,7 +45,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
   const handleInitiateSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
-    setResearchError('Research providers are disabled in this release. No credits were consumed.');
+    setResearchError('Live research is paused in this release. No credits were consumed.');
   };
 
   const handleCopyAllTags = () => {
@@ -73,7 +73,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
                 Product Research &amp; Keyword Explorer
               </h2>
               <span className="text-[10px] text-[#8a8f98] font-mono">
-                Demo preview · research providers disabled
+                Demo preview · live research paused
               </span>
             </div>
           </div>
@@ -132,7 +132,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
                 Planned cost: <strong className="text-[#f7f8f8]">{requiredCredits} research credit{requiredCredits > 1 ? 's' : ''}</strong>
               </span>
               <span>
-                Supabase balance: <strong className="text-[#30a46c]">{currentCredits} credit{currentCredits !== 1 ? 's' : ''}</strong>
+                Account balance: <strong className="text-[#30a46c]">{currentCredits} credit{currentCredits !== 1 ? 's' : ''}</strong>
               </span>
             </div>
           </form>
@@ -141,7 +141,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
           <div role="status" className="p-3 rounded-lg bg-[#f5d90a]/10 border border-[#f5d90a]/30 text-xs text-[#e8d76b] flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{researchError || 'Research providers are disabled in this release. No credits were consumed.'}</span>
+                <span>{researchError || 'Live research is paused in this release. No credits were consumed.'}</span>
               </div>
               <span className="text-[11px] text-[#8a8f98]">
                 Sample data below is not a live result.
@@ -152,7 +152,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
         {/* Results Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="rounded-lg border border-[#5e6ad2]/30 bg-[#5e6ad2]/10 px-3 py-2 text-[11px] leading-5 text-[#aab1ff]">
-            Demo preview: every value and tag below comes from static sample constants. Nothing was fetched from Etsy, Supabase research history, Gemini, or Apify.
+            Demo preview: every value and tag below is sample content. Nothing was fetched from the marketplace or saved to account history.
           </div>
           {/* Metrics Overview Grid (Taxonomy: Estimated vs Modeled) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -240,7 +240,7 @@ export const EtsyTagAnalyzerModal: React.FC<EtsyTagAnalyzerModalProps> = ({
           <div className="p-4 rounded-xl bg-[#18181f] border border-[#282835] space-y-3 text-xs">
             <span className="font-semibold text-[#f7f8f8]">Demo preview only</span>
             <p className="text-[#8a8f98] leading-5">
-              Sample keyword values cannot be added to the customer research board or persisted as Supabase saved listings.
+              Sample keyword values cannot be added to the customer research board or saved to the account.
             </p>
           </div>
         </div>

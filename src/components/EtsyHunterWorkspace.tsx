@@ -8,11 +8,16 @@ import {
   Zap,
   LogOut,
   ArrowLeft,
-  Settings,
   Tag,
   Layers,
   Menu,
-  X
+  X,
+  LayoutDashboard,
+  History,
+  CreditCard,
+  UserCog,
+  ArrowRight,
+  Activity
 } from 'lucide-react';
 import { EtsyProductItem, ResearchStage } from '../types/etsyHunter';
 import { EtsyHunterWorkspaceSwitcher } from './EtsyHunterWorkspaceSwitcher';
@@ -24,6 +29,7 @@ import {
   DashboardEmptyState,
   DashboardFilterBar,
   DashboardPageHeader,
+  DashboardSectionCard,
   DashboardStatCard,
   DashboardStatusIndicator
 } from './dashboard/DashboardUI';
@@ -57,17 +63,34 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   onSeedSampleProducts,
   onSignedOut
 }) => {
-  const { user, workspace, savedListings, isListingSaved, saveListing, removeSavedListing, signOut } = useAuth();
+  const { user, workspace, savedListings, searchHistory, isListingSaved, saveListing, removeSavedListing, signOut } = useAuth();
 
   const [internalActiveTab, setInternalActiveTab] = useState<'board' | 'watchlist' | 'settings'>('board');
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+  const [boardView, setBoardView] = useState<'overview' | 'research'>('overview');
+  const [settingsView, setSettingsView] = useState<'history' | 'plan' | 'settings'>('plan');
   const [sidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const activeView = activeTab === 'watchlist' ? 'saved' : activeTab === 'settings' ? settingsView : boardView;
 
   const handleTabSelect = (tab: 'board' | 'watchlist' | 'settings') => {
     setMobileSidebarOpen(false);
     if (onTabChange) onTabChange(tab);
     else setInternalActiveTab(tab);
+  };
+
+  const handleViewSelect = (view: 'overview' | 'research' | 'saved' | 'history' | 'plan' | 'settings') => {
+    if (view === 'overview' || view === 'research') {
+      setBoardView(view);
+      handleTabSelect('board');
+      return;
+    }
+    if (view === 'saved') {
+      handleTabSelect('watchlist');
+      return;
+    }
+    setSettingsView(view);
+    handleTabSelect('settings');
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,7 +110,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
     }
 
     if (demoProductIds.has(product.id)) {
-      setSavedListingError('Demo listings are for interface exploration and cannot be saved to your Supabase workspace.');
+      setSavedListingError('Demo listings are for interface exploration and cannot be saved to your account.');
       return;
     }
 
@@ -130,10 +153,20 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
       ? <DashboardStatusIndicator label="Mixed session + demo" tone="warning" title="This board contains both sample listings and entries added during this session." />
       : boardDataSource === 'empty'
         ? <DashboardStatusIndicator label="No board data" tone="neutral" title="No listing records are loaded on this board." />
-        : <DashboardStatusIndicator label="Session data" tone="info" title="Research board entries are kept for this signed-in session and are not Supabase records." />;
+        : <DashboardStatusIndicator label="Session data" tone="info" title="Research board entries are kept only for this signed-in session." />;
+
+  const navigation = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'research', label: 'Research', icon: Search },
+    { id: 'saved', label: 'Saved Listings', icon: Bookmark, count: savedListings.length },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'plan', label: 'Plan & Billing', icon: CreditCard },
+    { id: 'settings', label: 'Settings', icon: UserCog }
+  ] as const;
+  const activeViewLabel = navigation.find((item) => item.id === activeView)?.label ?? 'Overview';
 
   return (
-    <div className="flex h-dvh w-full bg-[#0b0b0f] text-[#f7f8f8] overflow-hidden">
+    <div className="flex h-dvh w-full overflow-hidden bg-[#0c0c0e] text-[#f4f4f5]">
       {mobileSidebarOpen && (
         <button
           type="button"
@@ -144,10 +177,10 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
       )}
       {/* 1. Left Minimalist Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 lg:static shrink-0 border-r border-[#22222b] bg-[#0b0b0f] flex flex-col justify-between transition-all duration-200 z-50 lg:z-30 ${
+        className={`fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col justify-between border-r border-[#24242b] bg-[#0f0f12] transition-transform duration-200 lg:static lg:z-30 ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${
-          sidebarCollapsed ? 'w-64 lg:w-16' : 'w-72 lg:w-64'
+          sidebarCollapsed ? 'w-64 lg:w-16' : 'w-72 lg:w-60'
         }`}
         aria-label="Customer workspace navigation"
       >
@@ -157,7 +190,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
             <div className="flex-1 min-w-0">
               <EtsyHunterWorkspaceSwitcher
                 collapsed={sidebarCollapsed}
-                onOpenSettings={() => handleTabSelect('settings')}
+                onOpenSettings={() => handleViewSelect('settings')}
               />
             </div>
             <button
@@ -173,14 +206,14 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
           {/* Quick Action: Search Keywords & Listings */}
           <button
             onClick={onOpenTagAnalyzer}
-            className={`w-full py-2 px-2.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold flex items-center transition-all shadow-[0_0_14px_rgba(94,106,210,0.3)] cursor-pointer ${
+            className={`flex w-full items-center rounded-md border border-[#7478e6]/60 bg-[#686cdf] px-2.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6] ${
               sidebarCollapsed ? 'justify-center px-0' : 'justify-between'
             }`}
             title="Open the disabled research preview"
           >
             <div className="flex items-center gap-2">
               <Search className="w-4 h-4 shrink-0" />
-              {!sidebarCollapsed && <span>Research Preview</span>}
+              {!sidebarCollapsed && <span>New research</span>}
             </div>
             {!sidebarCollapsed && (
               <span className="eh-kbd text-[9px] bg-white/20 border-white/30 text-white">
@@ -189,50 +222,33 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
             )}
           </button>
 
-          {/* Navigation Section */}
-          <nav className="space-y-1 pt-2 border-t border-[#22222b]">
-            <button
-              onClick={() => handleTabSelect('board')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === 'board'
-                  ? 'bg-[#18181f] text-[#f7f8f8] border border-[#282835]'
-                  : 'text-[#8a8f98] hover:text-[#f7f8f8] hover:bg-[#121216]'
-              } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
-            >
-              <Columns className="w-4 h-4 text-[#5e6ad2] shrink-0" />
-              {!sidebarCollapsed && <span>Research Board</span>}
-            </button>
-
-            <button
-              onClick={() => handleTabSelect('watchlist')}
-              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === 'watchlist'
-                  ? 'bg-[#18181f] text-[#f7f8f8] border border-[#282835]'
-                  : 'text-[#8a8f98] hover:text-[#f7f8f8] hover:bg-[#121216]'
-              } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Bookmark className="w-4 h-4 text-[#30a46c] shrink-0" />
-                {!sidebarCollapsed && <span>Saved Listings</span>}
-              </div>
-              {!sidebarCollapsed && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#18181f] text-[#8a8f98]">
-                  {savedListings.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => handleTabSelect('settings')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-[#18181f] text-[#f7f8f8] border border-[#282835]'
-                  : 'text-[#8a8f98] hover:text-[#f7f8f8] hover:bg-[#121216]'
-              } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
-            >
-              <Settings className="w-4 h-4 text-[#f5d90a] shrink-0" />
-              {!sidebarCollapsed && <span>Plan &amp; Quotas</span>}
-            </button>
+          <nav className="space-y-0.5 border-t border-[#24242b] pt-3" aria-label="Customer pages">
+            {!sidebarCollapsed && <div className="px-2.5 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#5f5f69]">Workspace</div>}
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const selected = activeView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleViewSelect(item.id)}
+                  aria-current={selected ? 'page' : undefined}
+                  className={`group flex w-full items-center rounded-md border px-2.5 py-2 text-xs font-medium transition-colors ${
+                    selected
+                      ? 'border-[#30303a] bg-[#1a1a20] text-[#f4f4f5]'
+                      : 'border-transparent text-[#91919b] hover:bg-[#15151a] hover:text-[#e4e4e7]'
+                  } ${sidebarCollapsed ? 'justify-center px-0' : 'justify-between'}`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Icon className={`h-4 w-4 shrink-0 ${selected ? 'text-[#9699f4]' : 'text-[#666670] group-hover:text-[#a1a1aa]'}`} />
+                    {!sidebarCollapsed && item.label}
+                  </span>
+                  {!sidebarCollapsed && 'count' in item && (
+                    <span className="rounded bg-[#24242b] px-1.5 py-0.5 text-[9px] tabular-nums text-[#91919b]">{item.count}</span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -285,9 +301,9 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
       </aside>
 
       {/* 2. Main Content Workspace */}
-      <div className="flex-1 flex flex-col h-dvh min-w-0 overflow-hidden bg-[#0b0b0f]">
+      <div className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden bg-[#0c0c0e]">
         {/* Top Workspace Header & Breadcrumbs */}
-        <header className="h-14 px-3 sm:px-6 border-b border-[#22222b] flex items-center justify-between gap-3 bg-[#0e0e13]/80 backdrop-blur-sm shrink-0">
+        <header className="flex h-13 shrink-0 items-center justify-between gap-3 border-b border-[#24242b] bg-[#101014] px-3 sm:px-6">
           <div className="flex items-center gap-2 text-xs min-w-0">
             <button
               type="button"
@@ -304,7 +320,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
             </span>
             <ChevronRight className="hidden sm:block w-3.5 h-3.5 text-[#575a65]" />
             <span className="text-[#707bfb] font-mono capitalize truncate">
-              {activeTab === 'board' ? 'Research Pipeline' : activeTab === 'watchlist' ? 'Saved Listings' : 'Settings'}
+              {activeViewLabel}
             </span>
           </div>
 
@@ -321,17 +337,17 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
 
             <button
               onClick={onOpenTagAnalyzer}
-              className="px-3 py-1.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_14px_rgba(94,106,210,0.35)] cursor-pointer"
+              className="flex h-8 items-center gap-1.5 rounded-md bg-[#686cdf] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6]"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Research Preview</span>
+              <span className="hidden sm:inline">New research</span>
             </button>
           </div>
         </header>
 
         {/* Global Status Banner */}
         <EtsyHunterStatusBanner
-          onOpenSettings={() => handleTabSelect('settings')}
+          onOpenSettings={() => handleViewSelect('plan')}
           onSeedDemoData={onSeedSampleProducts}
           totalListingsCount={products.length}
         />
@@ -351,7 +367,61 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
               </button>
             </div>
           )}
-          {activeTab === 'board' && (
+          {activeView === 'overview' && (
+            <div className="mx-auto max-w-6xl space-y-5 pb-10">
+              <DashboardPageHeader
+                eyebrow="Workspace"
+                title={`Welcome back${user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}`}
+                description="A clear view of your account usage, saved research, and recent activity."
+                icon={<LayoutDashboard className="h-5 w-5" />}
+                meta={<DashboardStatusIndicator label={workspace?.plan === 'none' ? 'No active plan' : `${workspace?.plan} plan`} tone={workspace?.plan === 'none' ? 'neutral' : 'info'} />}
+                actions={
+                  <button type="button" onClick={() => handleViewSelect('research')} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#686cdf] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6]">
+                    Open research <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                }
+              />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <DashboardStatCard label="Research credits" value={`${workspace?.creditsRemaining ?? 0} / ${workspace?.totalCredits ?? 0}`} description="Available with the current subscription" icon={<Zap className="h-4 w-4" />} tone="indigo" />
+                <DashboardStatCard label="Saved listings" value={workspace?.savedListingsCount ?? 0} description={`${workspace?.maxSavedListings ?? 0} account slots total`} icon={<Bookmark className="h-4 w-4" />} tone="green" />
+                <DashboardStatCard label="Completed research" value={searchHistory.length} description="Recorded in account history" icon={<History className="h-4 w-4" />} tone="neutral" />
+                <DashboardStatCard label="Current plan" value={workspace?.plan === 'none' ? 'None' : workspace?.plan ?? 'None'} description={workspace?.plan === 'none' ? 'Research credits remain unavailable' : 'Subscription status is active'} icon={<CreditCard className="h-4 w-4" />} tone="yellow" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <DashboardSectionCard
+                  title="Recent activity"
+                  description="Completed research recorded for this account."
+                  icon={<Activity className="h-4 w-4" />}
+                  action={<button type="button" onClick={() => handleViewSelect('history')} className="text-xs font-medium text-[#9da0ff] hover:text-white">View history</button>}
+                  bodyClassName={searchHistory.length > 0 ? 'p-0' : 'p-4'}
+                >
+                  {searchHistory.length > 0 ? (
+                    <div className="divide-y divide-[#24242b]">
+                      {searchHistory.slice(0, 5).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
+                          <div className="min-w-0"><div className="truncate text-xs font-medium text-[#f4f4f5]">{item.keyword}</div><div className="mt-0.5 text-[10px] text-[#70707a]">{item.timestamp}</div></div>
+                          <div className="shrink-0 text-right text-[11px] text-[#91919b]">{item.listingsFound} listings</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <DashboardEmptyState title="No recent research" description="Completed research will appear here when real results are recorded." icon={<History className="h-5 w-5" />} />
+                  )}
+                </DashboardSectionCard>
+
+                <DashboardSectionCard title="Service status" description="Current account availability." icon={<Layers className="h-4 w-4" />} bodyClassName="space-y-3 p-4">
+                  <StatusRow label="Account access" value="Active" tone="success" />
+                  <StatusRow label="Live research" value="Paused" tone="warning" />
+                  <StatusRow label="Saved listing storage" value={workspace && workspace.maxSavedListings > 0 ? 'Available' : 'Unavailable'} tone={workspace && workspace.maxSavedListings > 0 ? 'success' : 'neutral'} />
+                  <p className="border-t border-[#24242b] pt-3 text-[11px] leading-4 text-[#70707a]">Usage values reflect this account. Demo listings remain clearly labeled and separate.</p>
+                </DashboardSectionCard>
+              </div>
+            </div>
+          )}
+
+          {activeView === 'research' && (
             <div className="space-y-6">
               <DashboardPageHeader
                 eyebrow="Customer workspace"
@@ -365,7 +435,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                 <DashboardStatCard
                   label="Research credits"
                   value={`${workspace?.creditsRemaining ?? 0} / ${workspace?.totalCredits ?? 0}`}
-                  description="Active-subscription entitlement from Supabase"
+                  description="Available with the current subscription"
                   icon={<Zap className="h-4 w-4" />}
                   tone="indigo"
                 />
@@ -379,14 +449,14 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                 <DashboardStatCard
                   label="Active plan"
                   value={workspace?.plan === 'none' ? 'None' : workspace?.plan ?? 'None'}
-                  description="Verified subscription state from Supabase"
+                  description="Current account subscription status"
                   icon={<Layers className="h-4 w-4" />}
                   tone="neutral"
                 />
                 <DashboardStatCard
                   label="Session board entries"
                   value={products.length}
-                  description={boardDataSource === 'demo' ? 'Explicitly labeled demo entries' : boardDataSource === 'mixed' ? 'Mixed demo and session entries' : 'Not persisted to Supabase'}
+                  description={boardDataSource === 'demo' ? 'Explicitly labeled demo entries' : boardDataSource === 'mixed' ? 'Mixed demo and session entries' : 'Kept only for this session'}
                   icon={<Columns className="h-4 w-4" />}
                   tone="yellow"
                 />
@@ -443,12 +513,12 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
               {products.length === 0 ? (
                 <DashboardEmptyState
                   title="Your research board is empty"
-                  description="Research providers are disabled, so no live results can populate this board. Load explicitly labeled demo listings to explore the interface without treating them as marketplace data."
+                  description="Live research is paused, so no live results can populate this board. Load clearly labeled demo listings to explore the interface without treating them as marketplace data."
                   icon={<Search className="h-6 w-6" />}
                   action={
                     <button
                       onClick={onOpenTagAnalyzer}
-                      className="px-4 py-2 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-semibold shadow-[0_0_16px_rgba(94,106,210,0.35)] cursor-pointer flex items-center gap-1.5"
+                      className="flex items-center gap-1.5 rounded-md bg-[#686cdf] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7478e6]"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>View Research Preview</span>
@@ -472,7 +542,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                     return (
                       <div
                         key={col.key}
-                        className="rounded-2xl bg-[#121216] border border-[#22222b] p-3.5 flex flex-col min-h-[460px]"
+                        className="flex min-h-[420px] flex-col rounded-lg border border-[#24242b] bg-[#131317] p-3.5"
                       >
                         {/* Column Header */}
                         <div className="flex items-center justify-between mb-3 px-1">
@@ -491,10 +561,9 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                         {/* Items List */}
                         <div className="space-y-3 flex-1 overflow-y-auto">
                           {stageItems.map((prod) => (
-                            <div
+                            <article
                               key={prod.id}
-                              onClick={() => onSelectProduct(prod)}
-                              className="group p-3.5 rounded-xl bg-[#18181f] hover:bg-[#1f1f28] border border-[#282835] hover:border-[#383848] transition-all cursor-pointer shadow-sm relative space-y-3"
+                              className="group relative space-y-3 rounded-lg border border-[#292931] bg-[#18181d] p-3.5 transition-colors hover:border-[#3a3a45] hover:bg-[#1c1c22]"
                             >
                               {/* Header row: ID + Competition Score + Save Listing */}
                               <div className="flex items-center justify-between text-xs">
@@ -532,22 +601,18 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                                 </div>
                               </div>
 
-                              {/* Thumbnail and Title */}
-                              <div className="flex gap-2.5">
-                                <img
-                                  src={prod.imageUrl}
-                                  alt={prod.title}
-                                  className="w-12 h-12 rounded-lg object-cover border border-[#282835] shrink-0"
-                                />
-                                <div className="min-w-0">
-                                  <h4 className="text-xs font-semibold text-[#f7f8f8] line-clamp-2 leading-snug group-hover:text-white">
-                                    {prod.title}
-                                  </h4>
-                                  <div className="text-[10px] text-[#8a8f98] mt-0.5 truncate">
-                                    by <span className="text-[#f7f8f8]">{prod.shopName}</span>
-                                  </div>
-                                </div>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => onSelectProduct(prod)}
+                                className="flex w-full gap-2.5 rounded-md text-left"
+                                aria-label={`Open details for ${prod.title}`}
+                              >
+                                <img src={prod.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-md border border-[#292931] object-cover" />
+                                <span className="min-w-0">
+                                  <span className="line-clamp-2 text-xs font-semibold leading-snug text-[#f4f4f5] group-hover:text-white">{prod.title}</span>
+                                  <span className="mt-0.5 block truncate text-[10px] text-[#91919b]">by <span className="text-[#d7d7dc]">{prod.shopName}</span></span>
+                                </span>
+                              </button>
 
                               {/* Metrics Strip: Observed Price vs Estimated Monthly Revenue */}
                               <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-[#282835]/50 text-[11px]">
@@ -580,7 +645,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                               </div>
 
                               {/* Quick Stage Mover on hover */}
-                              <div className="pt-2 border-t border-[#282835]/40 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">
+                              <div className="flex items-center justify-between border-t border-[#292931] pt-2 text-[10px] opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                                 <span className="text-[#575a65]">Move:</span>
                                 <div className="flex items-center gap-1">
                                   {STAGES.filter((s) => s.key !== col.key).map((s) => (
@@ -597,11 +662,11 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
                                   ))}
                                 </div>
                               </div>
-                            </div>
+                            </article>
                           ))}
 
                           {stageItems.length === 0 && (
-                            <div className="p-8 text-center border border-dashed border-[#282835] rounded-xl text-xs text-[#575a65]">
+                            <div className="rounded-md border border-dashed border-[#303039] p-8 text-center text-xs text-[#70707a]">
                               No listings in this stage.
                             </div>
                           )}
@@ -614,17 +679,34 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
             </div>
           )}
 
-          {activeTab === 'watchlist' && (
+          {activeView === 'saved' && (
             <EtsyHunterWatchlist
               onOpenTagAnalyzer={onOpenTagAnalyzer}
             />
           )}
 
-          {activeTab === 'settings' && (
-            <EtsyHunterWorkspaceSettings onClose={() => handleTabSelect('board')} />
+          {(activeView === 'history' || activeView === 'plan' || activeView === 'settings') && (
+            <EtsyHunterWorkspaceSettings section={activeView} />
           )}
         </div>
       </div>
     </div>
   );
 };
+
+function StatusRow({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: string;
+  tone: 'neutral' | 'success' | 'warning';
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-[#24242b] bg-[#101014] px-3 py-2.5">
+      <span className="text-xs text-[#a1a1aa]">{label}</span>
+      <DashboardStatusIndicator label={value} tone={tone} />
+    </div>
+  );
+}

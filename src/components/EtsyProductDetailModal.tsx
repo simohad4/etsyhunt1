@@ -68,7 +68,7 @@ export const EtsyProductDetailModal: React.FC<EtsyProductDetailModalProps> = ({
       }
     } else {
       if (isDemoProduct) {
-        setSavedListingError('Demo listings cannot be saved to your Supabase workspace.');
+        setSavedListingError('Demo listings cannot be saved to your account.');
         return;
       }
       const result = await saveListing(product);

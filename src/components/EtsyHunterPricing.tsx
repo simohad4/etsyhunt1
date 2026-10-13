@@ -92,7 +92,7 @@ export const EtsyHunterPricing: React.FC<EtsyHunterPricingProps> = ({
         {/* Pricing Transparency Footnote */}
         <div className="mt-12 text-xs text-[#575a65] max-w-2xl mx-auto space-y-1">
           <p>
-            1 credit = 1 keyword search page (approx. up to 36 listings depending on provider results).
+            1 credit = 1 keyword search page (approximately 36 listings when available).
           </p>
           <p>
             Credits reset monthly. Unused credits do not roll over. Cancel anytime.
