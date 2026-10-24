@@ -9,6 +9,7 @@ import './provider-wire-drafts.test';
 import './research-execution-safety.test';
 import './research-dispatch-protocol.test';
 import './research-durable-dispatch-sql-contract.test';
+import './research-authority-contract.test';
 
 import {
   prepareResearchRequest,
