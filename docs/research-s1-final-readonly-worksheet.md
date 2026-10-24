@@ -719,13 +719,13 @@ Dependencies/parameters: Q6 plus approved existing owner_oids.
 
 Expected columns: owner_oid,kind,grantor,grantee,privilege_type,is_grantable.
 
-Built-in f/n/r/S/T/L defaults shown separately. Reconcile with global/schema overrides; current ACL/effective checks remain authoritative for current objects. Sequences/types are structural/default evidence, not included implicitly in table privilege functions.
+Built-in f/n/r/s/T/L defaults shown separately. The acldefault object-kind code for sequences is lowercase s; uppercase S means foreign servers. This differs from pg_class.relkind='S' for sequences. Reconcile with global/schema overrides; current ACL/effective checks remain authoritative for current objects. Sequences/types are structural/default evidence, not included implicitly in table privilege functions.
 
 ```sql
 SELECT r.oid AS owner_oid, kinds.kind, acl.grantor, acl.grantee,
        acl.privilege_type, acl.is_grantable
 FROM pg_catalog.pg_roles r
-CROSS JOIN (VALUES ('f'),('n'),('r'),('S'),('T'),('L')) AS kinds(kind)
+CROSS JOIN (VALUES ('f'),('n'),('r'),('s'),('T'),('L')) AS kinds(kind)
 LEFT JOIN LATERAL pg_catalog.aclexplode(
   pg_catalog.acldefault(kinds.kind::pg_catalog."char", r.oid)) AS acl ON true
 WHERE r.oid IN (SELECT v::pg_catalog.oid FROM
@@ -817,7 +817,7 @@ Dependencies/parameters: Q9; approved relation OIDs only.
 
 Expected columns: relation_oid,relkind,builtin_default,explicit_empty,grantor,grantee,privilege_type,is_grantable.
 
-Sequence defaults use S, not table r. Q9 does not evaluate sequence-specific USAGE/SELECT/UPDATE: any sequence privilege dependency remains unresolved until separately scoped; do not pass unsupported kinds.
+Sequence defaults use lowercase s, not table r or foreign-server S; pg_class.relkind remains uppercase S. Q9 does not evaluate sequence-specific USAGE/SELECT/UPDATE: any sequence privilege dependency remains unresolved until separately scoped; do not pass unsupported kinds.
 
 ```sql
 SELECT c.oid AS relation_oid, c.relkind, c.relacl IS NULL AS builtin_default,
@@ -825,7 +825,7 @@ SELECT c.oid AS relation_oid, c.relkind, c.relacl IS NULL AS builtin_default,
        acl.grantor, acl.grantee, acl.privilege_type, acl.is_grantable
 FROM pg_catalog.pg_class c
 LEFT JOIN LATERAL pg_catalog.aclexplode(COALESCE(c.relacl,
-  pg_catalog.acldefault(CASE WHEN c.relkind = 'S' THEN 'S'::pg_catalog."char"
+   pg_catalog.acldefault(CASE WHEN c.relkind = 'S' THEN 's'::pg_catalog."char"
     ELSE 'r'::pg_catalog."char" END,c.relowner))) AS acl ON true
 WHERE c.oid IN (SELECT v::pg_catalog.oid FROM
   pg_catalog.jsonb_array_elements_text($1::pg_catalog.jsonb -> 'relation_oids') AS s(v))

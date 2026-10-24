@@ -152,6 +152,26 @@ test('B10 exact object resolution avoids supplied reg casts and prevents unresol
     'INACCESSIBLE/UNKNOWN', 'CATALOG_PRESENT with no schema USAGE', 'Existing required M2 drift stops');
 });
 
+test('B11 sequence ACL defaults use lowercase s independently of uppercase S relation kind', () => {
+  assert.match(query('Q6-BUILTIN'), /\('f'\),\('n'\),\('r'\),\('s'\),\('T'\),\('L'\)/);
+  assert.doesNotMatch(query('Q6-BUILTIN'), /\('S'\)/);
+  assert.match(query('Q9-ACL'), /c\.relkind = 'S' THEN 's'::pg_catalog\."char"/);
+  assert.doesNotMatch(query('Q9-ACL'), /THEN 'S'::pg_catalog\."char"/);
+  includes('uppercase S means foreign servers', 'pg_class.relkind remains uppercase S',
+    'any sequence privilege dependency remains unresolved until separately scoped');
+});
+
+test('B11 parameter and zero-argument resolution guards remain explicit static contracts', () => {
+  assert.match(query('P0'), /WHERE NOT COALESCE\(CASE kind/);
+  assert.match(query('P0'), /::pg_catalog\.numeric <= 4294967295/);
+  assert.match(query('P0'), /::pg_catalog\.numeric <= 2147483647/);
+  assert.match(query('Q12'), /LEFT JOIN LATERAL pg_catalog\.unnest\(w\.argument_types\) WITH ORDINALITY/);
+  assert.match(query('Q12'), /COALESCE\(pg_catalog\.string_agg\(t\.oid::pg_catalog\.text,' ' ORDER BY a\.ord\),''\)/);
+  assert.match(query('Q12'), /ty\.resolved_count=pg_catalog\.cardinality\(w\.argument_types\)/);
+  includes('invalid structure may raise a sanitized SQLSTATE rather than return false',
+    'jsonb cannot recover duplicate keys already discarded by a parser');
+});
+
 test('B10 trigger constraints index and policy queries include structural safety fields without expression contents', () => {
   for (const field of ['tgtype', 'tgenabled', 'tgisinternal', 'tgconstraint', 'tgparentid', 'tgnargs',
     'tgconstrrelid', 'tgconstrindid', 'tgdeferrable', 'tginitdeferred']) assert.ok(query('Q11').includes(field));
