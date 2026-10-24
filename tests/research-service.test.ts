@@ -4,6 +4,7 @@ import test from 'node:test';
 import './research-execution-plan.test';
 import './research-provider-adapters.test';
 import './research-orchestration.test';
+import './research-economics-scenario.test';
 
 import {
   prepareResearchRequest,
