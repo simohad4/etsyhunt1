@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import './research-execution-plan.test';
+import './research-provider-adapters.test';
 
 import {
   prepareResearchRequest,
