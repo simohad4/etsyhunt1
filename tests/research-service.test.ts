@@ -15,6 +15,7 @@ import './research-provider-admission-contract.test';
 import './research-canonical-intent.test';
 import './research-lock-authority-design.test';
 import './research-durable-sql-feasibility.test';
+import './research-security-blocker-resolution.test';
 
 import {
   prepareResearchRequest,
