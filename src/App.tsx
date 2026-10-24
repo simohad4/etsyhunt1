@@ -52,9 +52,13 @@ function AppContent() {
 
   const workspaceTab = route.scope === 'customer' && route.page === 'saved'
     ? 'watchlist'
-    : route.scope === 'customer' && route.page === 'settings'
+    : route.scope === 'customer' && (route.page === 'history' || route.page === 'plan' || route.page === 'settings')
       ? 'settings'
       : 'board';
+
+  const workspaceView = route.scope === 'customer' && route.page !== 'not_found'
+    ? route.page
+    : 'board' as const;
 
   // Authenticated product-board state is session-only and never shared with the public demo.
   const [products, setProducts] = useState<EtsyProductItem[]>([]);
@@ -182,8 +186,8 @@ function AppContent() {
             boardDataSource={boardDataSource}
             demoProductIds={DEMO_PRODUCT_IDS}
             onUpdateProductStage={handleUpdateProductStage}
-            activeTab={workspaceTab}
-            onTabChange={(tab) => navigate(customerPathForPage(tab === 'watchlist' ? 'saved' : tab))}
+            activeView={workspaceView}
+            onViewChange={(view) => navigate(customerPathForPage(view))}
             onSeedSampleProducts={handleSeedDemoData}
             onSignedOut={() => navigate('/')}
           />

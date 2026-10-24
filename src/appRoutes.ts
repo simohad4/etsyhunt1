@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type CustomerPage = 'board' | 'saved' | 'settings' | 'not_found';
+export type CustomerPage =
+  | 'board'
+  | 'research'
+  | 'saved'
+  | 'history'
+  | 'plan'
+  | 'settings'
+  | 'not_found';
 
 export type AdminPage =
   | 'overview'
@@ -23,7 +30,10 @@ export type AppRoute =
 const CUSTOMER_ROUTES: Record<string, CustomerPage> = {
   '/app': 'board',
   '/app/board': 'board',
+  '/app/research': 'research',
   '/app/saved': 'saved',
+  '/app/history': 'history',
+  '/app/plan': 'plan',
   '/app/settings': 'settings'
 };
 
@@ -63,7 +73,10 @@ export function resolveAppRoute(pathname: string): AppRoute {
 
 export function customerPathForPage(page: Exclude<CustomerPage, 'not_found'>): string {
   if (page === 'board') return '/app/board';
+  if (page === 'research') return '/app/research';
   if (page === 'saved') return '/app/saved';
+  if (page === 'history') return '/app/history';
+  if (page === 'plan') return '/app/plan';
   return '/app/settings';
 }
 

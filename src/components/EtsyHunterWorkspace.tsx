@@ -43,8 +43,8 @@ interface EtsyHunterWorkspaceProps {
   boardDataSource: 'empty' | 'session' | 'demo' | 'mixed';
   demoProductIds: ReadonlySet<string>;
   onUpdateProductStage: (id: string, newStage: ResearchStage) => void;
-  activeTab?: 'board' | 'watchlist' | 'settings';
-  onTabChange?: (tab: 'board' | 'watchlist' | 'settings') => void;
+  activeView?: 'board' | 'research' | 'saved' | 'history' | 'plan' | 'settings';
+  onViewChange?: (view: 'board' | 'research' | 'saved' | 'history' | 'plan' | 'settings') => void;
   onSeedSampleProducts?: () => void;
   onSignedOut?: () => void;
 }
@@ -58,39 +58,22 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
   boardDataSource,
   demoProductIds,
   onUpdateProductStage,
-  activeTab: externalActiveTab,
-  onTabChange,
+  activeView: externalActiveView,
+  onViewChange,
   onSeedSampleProducts,
   onSignedOut
 }) => {
   const { user, workspace, savedListings, searchHistory, isListingSaved, saveListing, removeSavedListing, signOut } = useAuth();
 
-  const [internalActiveTab, setInternalActiveTab] = useState<'board' | 'watchlist' | 'settings'>('board');
-  const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
-  const [boardView, setBoardView] = useState<'overview' | 'research'>('overview');
-  const [settingsView, setSettingsView] = useState<'history' | 'plan' | 'settings'>('plan');
+  const [internalActiveView, setInternalActiveView] = useState<'board' | 'research' | 'saved' | 'history' | 'plan' | 'settings'>('board');
+  const activeView = externalActiveView !== undefined ? externalActiveView : internalActiveView;
   const [sidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const activeView = activeTab === 'watchlist' ? 'saved' : activeTab === 'settings' ? settingsView : boardView;
 
-  const handleTabSelect = (tab: 'board' | 'watchlist' | 'settings') => {
+  const handleViewSelect = (view: 'board' | 'research' | 'saved' | 'history' | 'plan' | 'settings') => {
     setMobileSidebarOpen(false);
-    if (onTabChange) onTabChange(tab);
-    else setInternalActiveTab(tab);
-  };
-
-  const handleViewSelect = (view: 'overview' | 'research' | 'saved' | 'history' | 'plan' | 'settings') => {
-    if (view === 'overview' || view === 'research') {
-      setBoardView(view);
-      handleTabSelect('board');
-      return;
-    }
-    if (view === 'saved') {
-      handleTabSelect('watchlist');
-      return;
-    }
-    setSettingsView(view);
-    handleTabSelect('settings');
+    if (onViewChange) onViewChange(view);
+    else setInternalActiveView(view);
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,7 +139,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
         : <DashboardStatusIndicator label="Session data" tone="info" title="Research board entries are kept only for this signed-in session." />;
 
   const navigation = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'board', label: 'Overview', icon: LayoutDashboard },
     { id: 'research', label: 'Research', icon: Search },
     { id: 'saved', label: 'Saved Listings', icon: Bookmark, count: savedListings.length },
     { id: 'history', label: 'History', icon: History },
@@ -367,7 +350,7 @@ export const EtsyHunterWorkspace: React.FC<EtsyHunterWorkspaceProps> = ({
               </button>
             </div>
           )}
-          {activeView === 'overview' && (
+          {activeView === 'board' && (
             <div className="mx-auto max-w-6xl space-y-5 pb-10">
               <DashboardPageHeader
                 eyebrow="Workspace"
