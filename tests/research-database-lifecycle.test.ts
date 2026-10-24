@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import './research-staging.integration.test.mjs';
 import {
   DEFAULT_RETRY_POLICY,
   MAX_OPENROUTER_INPUT_TOKENS
