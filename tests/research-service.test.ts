@@ -13,6 +13,7 @@ import './research-authority-contract.test';
 import './research-staging-authority-verification-plan.test';
 import './research-provider-admission-contract.test';
 import './research-canonical-intent.test';
+import './research-lock-authority-design.test';
 
 import {
   prepareResearchRequest,
