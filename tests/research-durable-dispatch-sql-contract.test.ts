@@ -54,7 +54,7 @@ test('all eight RPCs have typed signatures, common outputs and operation-specifi
 test('RPC security and replay contracts reject caller authority, changed replay and stale fencing', () => {
   const common = section('## 4.', '### claim_research_dispatch(');
   contains(common, 'SECURITY DEFINER', 'owner postgres', 'search_path=pg_catalog',
-    'Revoke EXECUTE from PUBLIC/anon/authenticated', 'grant only service_role',
+    'Revoke EXECUTE from PUBLIC/anon/authenticated and service_role', 'grant only the separated capability roles',
     'Service-role possession alone is insufficient', 'research.view is insufficient',
     'CURRENT state', 'CONFLICTING_REPLAY', 'STALE_REVISION/STALE_EPOCH', 'IDENTITY_MISMATCH',
     'fixed and sanitized', 'No HTTP while locks are held');
@@ -96,8 +96,8 @@ test('billing contracts preserve unknowns, deduplicate evidence and keep financi
 });
 
 test('retention explicitly addresses Auth cascades and unresolved deletion policy', () => {
-  contains(design, 'no automatic TTL or Auth-delete cascade', 'RESTRICT intentionally prevents existing Auth/job cascades',
-    'without a new cascading Auth FK', 'anonymize user-facing profile data', 'must not disable triggers or delete liabilities',
+  contains(design, 'no automatic TTL or Auth-delete cascade', 'research_accounting_subjects',
+    'research_accounting_auth_links', 'anonymize user-facing profile data', 'must not disable triggers or delete liabilities',
     'Policy/legal retention, orphan handling, backups and privileged purge authority remain UNKNOWN');
 });
 
@@ -176,4 +176,81 @@ test('lock-order acceptance requires multi-session staging runtime validation an
     'one source ledger effect', 'no callable legacy bypass',
     'Static documentation cannot establish deadlock freedom',
     'does not prove all possible schedules safe', 'not performed in B1');
+});
+
+test('separated authority requires verified connection identity, narrow grants and revocation before replay', () => {
+  const authority = section('### 2A.', '### 2B.');
+  contains(authority, 'separate authenticated backend connection principals: dispatcher, reconciler and billing',
+    'No shared service_role credential may invoke the new protocol', 'narrow NOLOGIN capability role',
+    '| dispatcher | claim_research_dispatch, renew_research_dispatch_claim, arm_research_submission, bind_research_provider_identity, hold_research_dispatch |',
+    '| reconciler | reconcile_research_dispatch |',
+    '| billing | record_research_billing_evidence, apply_research_billing_adjustment |',
+    'derived from session_user, NOT current_user', 'not authentication',
+    'on EVERY operation, including replay', 'Post-revocation replay cannot bypass capability checks',
+    'terminate/drain existing sessions', 'Supabase connection-path support', 'are UNKNOWN',
+    'Do not silently fall back to shared service_role');
+});
+
+test('canonical intent specifies strict domain-separated bytes and mandatory cross-language golden vectors', () => {
+  const intent = section('### 2B.', '### 2C.');
+  contains(intent, 'dispatch-canonical-v1', 'submission-intent-v1', 'dispatch-operation-v1',
+    'one zero byte', 'SHA-256', 'UTF-8 byte length', 'sorted by unsigned UTF-8 byte order',
+    'No floats', 'duplicate keys', 'reject lone surrogates, U+0000', 'Do not silently normalize Unicode',
+    'immutable provider body', 'Exclude Auth UUID/email, credentials',
+    'Encoding must not use JSON.stringify or jsonb::text',
+    'TypeScript/PostgreSQL golden vectors are REQUIRED BEFORE IMPLEMENTATION',
+    'Assert identical bytes and SHA-256', 'vectors are not implemented or certified here');
+});
+
+test('OpenRouter intent waits for validated source input and admission remains atomic', () => {
+  const intent = section('### 2B.', '### 2C.');
+  contains(intent, 'OpenRouter intent is created ONLY when its validated input exists',
+    'Apify source-attempt identity', 'cannot be finalized at initial job reservation',
+    'atomically create the attempt plus immutable dispatch/intent snapshot',
+    'old begin signature cannot invent missing input', 'current wire drafts remain unverified against live providers');
+});
+
+test('billing excludes unallocatable invoices and forbids duplicate recognition or premature financial release', () => {
+  const finance = section('## 7.', '## 8.');
+  contains(finance, 'ONLY attempt-attributable billing evidence',
+    'Pooled, overlapping and unattributable invoice allocation is explicitly excluded',
+    'never invent proportional allocations', 'verified invoice amount is not final all-in cost',
+    'Missing charges remain UNKNOWN, never zero',
+    'signed correction relative to a referenced previously recorded evidence baseline',
+    'same economic event cannot be recognized once as a billing_event and again as a corrective adjustment',
+    'uncertain baselines reject', 'negative evidence does not release liability');
+  contains(design, 'Financial closure and liability release are UNAVAILABLE',
+    'none of these eight RPCs may set that state', 'FINANCIAL_RELEASE_UNAVAILABLE');
+});
+
+test('retained accounting scope replaces Auth-dependent FKs with a removable mapping and controlled deletion', () => {
+  const retention = section('### 2C.', '## 3.');
+  contains(retention, 'separate accounting-subject identity and removable Auth mapping',
+    'auth_user_id uuid PRIMARY KEY referencing auth.users ON DELETE CASCADE',
+    'Only this removable mapping participates in Auth deletion',
+    'NO retained dispatch FK to auth.users, research_jobs or research_provider_attempts',
+    'Pseudonymization is not anonymization', 'Dedicated purge authority',
+    'Jurisdiction-specific legal retention periods', 'are UNKNOWN');
+  assert.doesNotMatch(design, /composite FK \(attempt_id, request_id, user_id, provider\) to M2/);
+  assert.doesNotMatch(design, /p_request_id uuid, p_user_id uuid, p_attempt_id uuid/);
+  contains(design, 'p_accounting_subject_id uuid', 'canonical arguments use accounting_subject_id, not p_user_id');
+});
+
+test('cutover includes new authority and mapping dependencies and identifies unverified implicit locks', () => {
+  const cutover = section('Atomic legacy bypass prevention:', '## 7.');
+  contains(cutover, 'all six affected M2 lifecycle entry points',
+    'hardened atomically in one future migration transaction',
+    'drain/terminate relevant in-flight transactions', 'separated principal/capability checks',
+    'implicit FK, unique-index, trigger, Auth deletion and financial UPDATE locks',
+    'subject/account gate', 'exact placement is UNKNOWN',
+    'separately authorized independent-session staging tests',
+    'no executable migration is ready while this ordering decision is unresolved');
+});
+
+test('M4.7 shared late-billing phase is explicitly not the independent M4.8 SQL contract', () => {
+  const dispatch = section('### research_dispatches\n', '### research_dispatch_events\n');
+  contains(dispatch, 'Simulator difference: M4.7 late_adjustment explicitly sets phase=reconciliation_hold',
+    'M4.8 instead preserves completed/reconciled execution phase',
+    'M4.7 simulator is unchanged', 'not a SQL CHECK requirement',
+    'Migration-specific tests must follow the independent M4.8 contract');
 });
