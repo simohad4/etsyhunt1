@@ -1,0 +1,18 @@
+# Provider contract evidence — 2026-10-24
+
+Inventory based on public documentation retrieved during M4.5 B1 on 2026-10-24. B2 made no network requests. Published contracts are evidence, not proof of live compatibility. No immutable actor build/version or exact documentation revision timestamp was obtained; the actor page showed only a relative modification date. No live captures exist in these fixtures.
+
+| Official URL | Published evidence | Limitations |
+| --- | --- | --- |
+| https://apify.com/yumitori/etsy-listings-scraper/input-schema | queries array, 1–50; maxPages integer 1–30/default 3; maxResults integer 1–1080; smaller limit wins; sort options score/carts/lastsale/created/price-asc/price-desc; country enumerated/default US; includeAds boolean/default true; dedupeAcrossQueries boolean/default true; includeInDemand boolean/default false | queries shown optional, but README calls it required; query item lengths, per-query/global cap semantics not fully established |
+| https://apify.com/yumitori/etsy-listings-scraper | Sample has numeric listingId/price, string listingUrl/title/shopName/currencyCode, plus additional listing/shop signals; demand lookups add per-listing requests; overlapping pages/early exhaustion described | Example types do not establish full schema, requiredness, nullability, numeric precision or complete run status |
+| https://apify.com/yumitori/etsy-listings-scraper/pricing | $8/1000 listing events and $0.00005 actor-start events advertised | Duplicate/partial/failed-run billing and demand charges unresolved; no rate-card activation |
+| https://apify.com/yumitori/etsy-listings-scraper/api | Public API page | No immutable build identified |
+| https://openrouter.ai/docs/api/api-reference/chat/create-a-chat-completion | POST /api/v1/chat/completions; messages/model, stream, max_completion_tokens, response_format, provider; id/choices/usage response | Generic API documentation, not a pinned-model execution test; max_tokens marked deprecated |
+| https://openrouter.ai/docs/api_reference/overview | id, model, created, choices/message, finish_reason/native_finish_reason; prompt_tokens/completion_tokens/total_tokens; optional usage detail | Additional provider fields and finish reasons possible; native tokenizer differs from byte estimate |
+| https://openrouter.ai/docs/guides/features/structured-outputs | response_format json_schema with name/strict/schema; require_parameters recommendation | Schema enforcement varies by upstream provider; subset support needs endpoint evidence |
+| https://openrouter.ai/google/gemini-3.1-flash-lite | Pinned model documented with JSON-schema support and Standard $0.25/M input, $1.50/M output; providers listed | Availability/rates mutable; release date May 7, 2026 is not a deployment version |
+| https://openrouter.ai/docs/guides/routing/provider-selection | only/order, allow_fallbacks, require_parameters and price-filter policies | Chosen provider slug/endpoint capability not live-validated by B2 |
+| https://openrouter.ai/docs/api_reference/errors-and-debugging | error code/message/metadata; errors can appear in body/stream; retry guidance | Does not authorize retries or establish that an errored/timeout request was unbilled |
+
+The published demand name is **includeInDemand**, default false. No includeDemand alias was found. This resolves the documentation spelling, not historical-build compatibility. The fixed baseline uses score/US/includeAds=true/dedupeAcrossQueries=true/includeInDemand=false. These are explicit policy choices. No fields are inferred from marketing claims, no shop metric becomes a listing metric, and no AI narrative becomes observed evidence.

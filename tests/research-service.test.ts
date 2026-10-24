@@ -5,6 +5,7 @@ import './research-execution-plan.test';
 import './research-provider-adapters.test';
 import './research-orchestration.test';
 import './research-economics-scenario.test';
+import './provider-wire-drafts.test';
 
 import {
   prepareResearchRequest,
