@@ -18,6 +18,7 @@ import './research-durable-sql-feasibility.test';
 import './research-security-blocker-resolution.test';
 import './research-security-implementation-decisions.test';
 import './research-staging-implementation-plan.test';
+import './research-s1-final-readonly-worksheet.test';
 
 import {
   prepareResearchRequest,
