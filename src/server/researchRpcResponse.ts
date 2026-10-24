@@ -17,8 +17,10 @@ export type ResearchReservationStatus =
   | 'failed'
   | 'apify_running'
   | 'apify_complete'
+  | 'apify_failed'
   | 'openrouter_running'
-  | 'openrouter_complete';
+  | 'openrouter_complete'
+  | 'openrouter_failed';
 
 export interface ResearchReservationResponse {
   success: boolean;
@@ -34,6 +36,7 @@ export type ResearchReservationDecision =
   | 'new_reservation'
   | 'existing_reservation'
   | 'already_processing'
+  | 'stage_failed'
   | 'already_succeeded'
   | 'rejected'
   | 'failed'
@@ -42,11 +45,11 @@ export type ResearchReservationDecision =
 function isRecord(
   value: unknown
 ): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value)
-  );
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return (prototype === Object.prototype || prototype === null) &&
+    Reflect.ownKeys(value).every(key => typeof key === 'string' &&
+      'value' in Object.getOwnPropertyDescriptor(value, key)!);
 }
 
 function isNonNegativeInteger(
@@ -71,6 +74,12 @@ export function parseResearchReservationResponse(
 
   const { success, idempotent, status } = value;
 
+  const allowedFields = ['success', 'idempotent', 'status', 'credits_reserved',
+    'credits_remaining', 'provider_budget_reserved_micro_usd', 'required'];
+  if (Object.getOwnPropertyNames(value).some(field => !allowedFields.includes(field))) {
+    throw new ResearchRpcResponseError('INVALID_RESPONSE', 'Research reservation has unexpected fields.');
+  }
+
   if (
     typeof success !== 'boolean' ||
     typeof idempotent !== 'boolean' ||
@@ -90,8 +99,10 @@ export function parseResearchReservationResponse(
     'failed',
     'apify_running',
     'apify_complete',
+    'apify_failed',
     'openrouter_running',
-    'openrouter_complete'
+    'openrouter_complete',
+    'openrouter_failed'
   ];
 
   if (!allowedStatuses.includes(
@@ -112,8 +123,7 @@ export function parseResearchReservationResponse(
 
   for (const field of numericFields) {
     if (
-      value[field] !== undefined &&
-      value[field] !== null &&
+      Object.hasOwn(value, field) &&
       !isNonNegativeInteger(value[field])
     ) {
       throw new ResearchRpcResponseError(
@@ -123,34 +133,20 @@ export function parseResearchReservationResponse(
     }
   }
 
-  if (
-    status === 'reserved' &&
-    success !== true
-  ) {
+  // M2 existing-job replay: success is false ONLY for failed/rejected.
+  // The same rule also matches both fresh reserved/rejected return paths.
+  if (success !== (status !== 'failed' && status !== 'rejected')) {
     throw new ResearchRpcResponseError(
       'INCONSISTENT_RESPONSE',
-      'Reserved research must have success=true.'
+      'Research reservation success contradicts its job status.'
     );
   }
 
-  if (
-    (status === 'rejected' || status === 'failed') &&
-    success !== false
-  ) {
-    throw new ResearchRpcResponseError(
-      'INCONSISTENT_RESPONSE',
-      'Rejected or failed research cannot have success=true.'
-    );
-  }
-
-  if (
-    status === 'ambiguous' &&
-    success !== idempotent
-  ) {
-    throw new ResearchRpcResponseError(
-      'INCONSISTENT_RESPONSE',
-      'Ambiguous research response has inconsistent flags.'
-    );
+  if (idempotent && (
+    !isNonNegativeInteger(value.credits_reserved) || value.credits_reserved === 0 ||
+    !isNonNegativeInteger(value.provider_budget_reserved_micro_usd)
+  )) {
+    throw new ResearchRpcResponseError('INVALID_RESPONSE', 'Existing reservation is missing credit or budget details.');
   }
 
   if (
@@ -230,6 +226,10 @@ export function classifyResearchReservation(
 
   if (response.status === 'failed') {
     return 'failed';
+  }
+
+  if (response.status === 'apify_failed' || response.status === 'openrouter_failed') {
+    return 'stage_failed';
   }
 
   if (response.status === 'succeeded') {

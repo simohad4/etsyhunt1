@@ -3,6 +3,7 @@ import test from 'node:test';
 import { prepareResearchRequest } from '../src/server/researchService';
 import { ResearchEconomicsError } from '../src/server/researchEconomics';
 import { ResearchRpcResponseError } from '../src/server/researchRpcResponse';
+import { planResearchExecution } from '../src/server/researchExecutionPlan';
 import {
   reserveResearchJob,
   mapResearchReservationParameters,
@@ -83,12 +84,31 @@ for (const [status, success, decision] of [
   ['succeeded', true, 'already_succeeded'],
   ['apify_running', true, 'already_processing'],
   ['apify_complete', true, 'already_processing'],
+  ['apify_failed', true, 'stage_failed'],
   ['openrouter_running', true, 'already_processing'],
-  ['openrouter_complete', true, 'already_processing']
+  ['openrouter_complete', true, 'already_processing'],
+  ['openrouter_failed', true, 'stage_failed']
 ] as const) {
   test(`existing ${status} response is classified as ${decision}, never a new reservation`, () => {
     const result = resolveData({ ...reservedResponse, idempotent: true, status, success });
     assert.equal(result.decision, decision);
+  });
+}
+
+for (const status of ['apify_failed','openrouter_failed'] as const) {
+  test(`RPC interpretation and M4.1 agree on original ${status} without retry permission`, () => {
+    const data = { ...reservedResponse, idempotent: true, status };
+    const interpreted = resolveData(data);
+    const planned = planResearchExecution({kind: 'reservation_response', response: data});
+    assert.equal(interpreted.decision, 'stage_failed');
+    assert.equal(interpreted.response.status, status);
+    assert.equal(planned.classification, 'stage_failed');
+    assert.equal(planned.databaseStatus, status);
+    assert.equal(planned.executionAuthorized, false);
+    assert.equal(planned.automaticRetryAllowed, false);
+    assert.equal(planned.requiresAuthoritativeDatabaseValidation, true);
+    assert.throws(() => resolveData({ ...data, success: false }), ResearchRpcResponseError);
+    assert.equal(planResearchExecution({kind: 'reservation_response', response: { ...data, success: false }}).classification, 'invalid_observation');
   });
 }
 
